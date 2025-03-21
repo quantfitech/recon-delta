@@ -32,6 +32,8 @@ HOST = os.getenv('MYSQL_HOST')
 DATABASE = os.getenv('MYSQL_DATABASE')
 
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
+stablecoins = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
+
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -85,8 +87,9 @@ def plot(df):
     plt.show()
 
 def data_process(df):
+
     df = df.reset_index(drop=True)
-    df.columns = df.iloc[0]
+
     keep_columns = [
                "account", "asset", "price", "current_quantity", "desired_quantity",
                "expected_quantity","native_difference","nominal_difference","nominal_quantity","epoch","timestamp"
@@ -102,81 +105,127 @@ def data_process(df):
     # df[float_columns] = df[float_columns].applymap(lambda x: f"{x:,.0f}" if pd.notna(x) else "0")
     return df
 
+
+def overwrite_values(df, df_correction):
+
+    # Iterate through df2 and update df1 where asset and epoch match
+    for _, row in df_correction.iterrows():
+        mask = (df['epoch'] == row['epoch']) & (df['asset'] == row['asset'])
+        for col in df_correction.columns:
+            if col not in ['epoch', 'asset'] and pd.notna(row[col]):
+                df.loc[mask, col] = row[col]
+    return df
+
 def compute_diff_native(df):
     df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
 
     desired_quantity_sum = df_filtered.groupby(['asset','price', 'timestamp', 'epoch'])['desired_quantity'].sum().reset_index()
-    desired_quantity_sum.rename(columns={'desired_quantity': 'sum_desired_quantity'}, inplace=True)
+    desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
 
     current_quantity_sum = df.groupby(['asset', 'price', 'timestamp', 'epoch'])['current_quantity'].sum().reset_index()
-    current_quantity_sum.rename(columns={'current_quantity': 'sum_current_quantity'}, inplace=True)
+    current_quantity_sum.rename(columns={'current_quantity': 'current_quantity'}, inplace=True)
 
     df_merged = current_quantity_sum.merge(desired_quantity_sum, on=['asset', 'price', 'timestamp', 'epoch'], how='left')
 
-    df_merged['diff_native'] = df_merged['sum_current_quantity'] - df_merged['sum_desired_quantity'].fillna(0)
+    df_merged['diff_native'] = df_merged['current_quantity'] - df_merged['desired_quantity'].fillna(0)
     df_merged['diff_nominal'] = df_merged['diff_native'] * df_merged['price']
-    df_merged['current_nominal'] = df_merged['sum_current_quantity'] * df_merged['price']
+    df_merged['current_nominal'] = df_merged['current_quantity'] * df_merged['price']
 
 
     keep_columns = [
-         "asset", "price", "sum_current_quantity",
+        "asset", "price", "current_quantity",
         "current_nominal", "diff_native", "diff_nominal", "epoch", "timestamp"
     ]
 
     df = df_merged[keep_columns]
     # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
-    printdf(df.head(10))
-
     return df
 
-def df_split(df,stablecoins):
+def df_split(df, stablecoins):
 
     df_stable = df[df['asset'].isin(stablecoins)]
     df_crypto = df[~df['asset'].isin(stablecoins)]
 
-    print("Stablecoins DataFrame:")
-    printdf(df_stable)
-
-    print("\nCryptocurrency DataFrame:")
-    printdf(df_crypto)
+    # print("Stablecoins DataFrame:")
+    # printdf(df_stable)
+    #
+    # print("\nCryptocurrency DataFrame:")
+    # printdf(df_crypto)
     return df_stable, df_crypto
 
-def delta_overview(df_t, df_t_1, eur_usd_t,eur_usd_t_1):
-    aum_t = df_t['current_nominal'].sum()
-    equity_t = df_t['diff_nominal'].sum()
-    aum_t_1 = df_t_1['current_nominal'].sum()
-    equity_t_1 = df_t_1['diff_nominal'].sum()
-    delta = (equity_t - equity_t_1) / eur_usd_t
+def delta_overview(df, eur_usd_t,eur_usd_t_1):
+    aum_t = df['current_nominal_t'].sum() / eur_usd_t
+    equity_t = (df['diff_native_t'] * df['price_t']).sum()/ eur_usd_t
+    long_equity = df.loc[df["diff_nominal_t"] > 0, "diff_nominal_t"].sum() / eur_usd_t
+    short_equity = df.loc[df["diff_nominal_t"] < 0, "diff_nominal_t"].sum() / eur_usd_t
+    equity_lag = (df['diff_native_t_1'] * df['price_t']).sum() / eur_usd_t
+    aum_t_1 = df['current_nominal_t_1'].sum() / eur_usd_t_1
+    equity_t_1 = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
+    delta_equity = (equity_t - equity_t_1)
+    delta_aum = (aum_t - aum_t_1)
+    delta_price_diff = ((df['price_t'] - df['price_t_1']) * df['diff_native_t_1']).sum() / eur_usd_t
+    delta_pos_diff = ((df['diff_native_t'] - df['diff_native_t_1']) * df['price_t']).sum() / eur_usd_t
+    delta_fx_diff = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t - (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
+    delta_market_diff = delta_price_diff + delta_fx_diff
 
-# def corrections
+    delta_dict = {
+        # "aum_t": int(aum_t),
+        # "aum_t_1": int(aum_t_1),
+        # "delta_aum": int(delta_aum),
+
+        "equity_t": int(equity_t),
+        "equity_t_1": int(equity_t_1),
+
+        "long_equity": int(long_equity),
+        "short_equity": int(short_equity),
+        "equity_lag": int(equity_lag),
+        "delta_equity": int(delta_equity),
+        "delta_price_diff": int(delta_price_diff),
+        "delta_pos_diff": int(delta_pos_diff),
+        "delta_fx_diff": int(delta_fx_diff),
+        "delta_market_diff": int(delta_market_diff)
+
+    }
+
+    for key, value in delta_dict.items():
+        print(f"{key}: {value:,}")
+    return delta_dict
+
+def process_dataframe(df,df_correction):
+    df = data_process(df)
+
+    df = compute_diff_native(df)
+    df = overwrite_values(df, df_correction)
+    eur_usd = df.loc[df['asset'] == 'EUR', 'price'].values
+    df_stable, df_crypto = df_split(df, stablecoins)
+    return df, eur_usd, df_stable, df_crypto
 
 def main():
-    stablecoins = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-    epoch_t = 24143
-    epoch_t_1 = 23838
+    epoch_t = 26447
+    epoch_t_1 = 26161
 
-    # df_t = pull_positions_raw(epoch_t)
-    # df_t_1 = pull_positions_raw(epoch_t_1)
+    df_t = pull_positions_raw(epoch_t)
+    df_t_1 = pull_positions_raw(epoch_t_1)
 
-    # df.to_csv('epoch_t.csv', index=False)
-    # sys.exit(1)
-    df_t = pd.read_csv('epoch_t.csv', header = None)
-    df_t_1 = pd.read_csv('epoch_t_1.csv', header = None)
+    df_t.to_csv('epoch_t.csv', index=False)
+    df_t_1.to_csv('df_t_1.csv', index=False)
 
+    df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
 
-    df_t = data_process(df_t)
-    df_t = compute_diff_native(df_t)
-    eur_usd_t = df_t.loc[df_t['asset'] == 'EUR', 'price'].values
-    df_stable_t, df_crypto_t = df_split(df_t,stablecoins)
+    df_t, eur_usd_t, df_stable_t, df_crypto_t = process_dataframe(df_t, df_correction)
 
-    df_t_1 = data_process(df_t_1)
-    df_t_1 = compute_diff_native(df_t_1)
-    eur_usd_t_1 = df_t_1.loc[df_t_1['asset'] == 'EUR', 'price'].values
-    df_stable_t_1, df_cryptot_1 = df_split(df_t_1,stablecoins)
+    df_t_1, eur_usd_t_1, df_stable_t_1, df_crypto_t_1 = process_dataframe(df_t_1, df_correction)
 
-    print(eur_usd_t,eur_usd_t_1)
-    delta_overview(df_crypto_t, df_cryptot_1, eur_usd_t,eur_usd_t_1)
+    print(f'EUR/USD_T: {eur_usd_t},\nEUR/USD_T-1: {eur_usd_t_1}')
+    df_crypto_2t = df_crypto_t.merge(df_crypto_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
 
+    print(f'\nThe crypto delta between {df_crypto_2t['timestamp_t_1'][0]} and {df_crypto_2t['timestamp_t'][0]}is:')
+    delta_dict = delta_overview(df_crypto_2t, eur_usd_t,eur_usd_t_1)
+    # print(delta_dict)
+
+    df_stable_2t = df_stable_t.merge(df_stable_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
+    print(f'\nThe stable delta between {df_crypto_2t['timestamp_t_1'][0]} and {df_crypto_2t['timestamp_t'][0]}is:')
+    delta_dict = delta_overview(df_stable_2t, eur_usd_t ,eur_usd_t_1 )
 
 
 
