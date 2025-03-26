@@ -204,7 +204,6 @@ def main():
     forecast(df_grouped,frequency = 'D' )
     # sys.exit(1)
 
-
     data_visualization(df)
     # data_visualization(df_grouped)
     print(df_grouped)

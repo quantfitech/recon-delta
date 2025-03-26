@@ -32,7 +32,7 @@ HOST = os.getenv('MYSQL_HOST')
 DATABASE = os.getenv('MYSQL_DATABASE')
 
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
-stablecoins = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
+stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
 
 
 def printdf(df: pd.DataFrame) -> None:
@@ -141,21 +141,26 @@ def compute_diff_native(df):
     # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
     return df
 
-def df_split(df, stablecoins):
+def df_split(df, stable):
+    # 1. df_crypto: asset not in stable
+    df_crypto = df[~df['asset'].isin(stable)]
 
-    df_stable = df[df['asset'].isin(stablecoins)]
-    df_crypto = df[~df['asset'].isin(stablecoins)]
+    # 2. df_stable_eur: asset == 'EUR'
+    df_stable_eur = df[df['asset'] == stable[0]]
 
-    # print("Stablecoins DataFrame:")
-    # printdf(df_stable)
-    #
-    # print("\nCryptocurrency DataFrame:")
-    # printdf(df_crypto)
-    return df_stable, df_crypto
+    # 3. df_stable_usd: asset in stable excluding 'EUR'
+    df_stable_usd = df[df['asset'].isin(stable[1:])]
+
+    # 4. df_stable: asset in stable
+    df_stable = df[df['asset'].isin(stable)]
+
+    return df_crypto, df_stable_usd, df_stable_eur, df_stable
 
 def delta_overview(df, eur_usd_t,eur_usd_t_1):
+
     aum_t = df['current_nominal_t'].sum() / eur_usd_t
     equity_t = (df['diff_native_t'] * df['price_t']).sum()/ eur_usd_t
+    df["diff_nominal_t"] = df['diff_native_t'] * df['price_t']
     long_equity = df.loc[df["diff_nominal_t"] > 0, "diff_nominal_t"].sum() / eur_usd_t
     short_equity = df.loc[df["diff_nominal_t"] < 0, "diff_nominal_t"].sum() / eur_usd_t
     equity_lag = (df['diff_native_t_1'] * df['price_t']).sum() / eur_usd_t
@@ -197,36 +202,80 @@ def process_dataframe(df,df_correction):
     df = compute_diff_native(df)
     df = overwrite_values(df, df_correction)
     eur_usd = df.loc[df['asset'] == 'EUR', 'price'].values
-    df_stable, df_crypto = df_split(df, stablecoins)
-    return df, eur_usd, df_stable, df_crypto
+    # df_crypto, df_stable_usd, df_stable_eur, df_stable = df_split(df, stable)
+    return df, eur_usd
+
+def recon_breaks(df, threshold):
+
+    df['break_native'] = df['diff_native_t'] - df['diff_native_t_1']
+    df['break_nominal'] = df['break_native'] * df['price_t']
+
+    df['breaks']  = abs(df['break_nominal']) > threshold
+
+    df_breaks = df[df['breaks']][['asset', 'diff_native_t', 'diff_native_t_1', 'breaks', 'break_native', 'break_nominal', 'timestamp_t']].copy()
+    df_breaks = df_breaks.reindex(df_breaks['break_nominal'].abs().sort_values(ascending=False).index)
+
+    return df_breaks
+def historical_diff(df, df_new):
+    df = extract_diff_native_column(df)
+    new_col_df = extract_diff_native_column(df_new)
+
+    df = df.merge(new_col_df, on='asset', how='outer')
+    return df
+
+def extract_diff_native_column(df):
+    date_str = pd.to_datetime(df['timestamp'].iloc[0]).strftime('%Y%m%d')
+    column_name = f'diff_native_{date_str}'
+    return df[['asset', 'diff_native']].rename(columns={'diff_native': column_name})
 
 def main():
-    epoch_t = 26447
-    epoch_t_1 = 26161
+    # if the nominal amount of the differences is greater than the threshold we check the break
+    threshold = 1000
+    epoch_t = 27903
+    epoch_t_1 = 27596
+    # df_epoch = pd.read_csv('epoch.csv')
+    # print(df_epoch)
+    # sys.exit(1)
 
     df_t = pull_positions_raw(epoch_t)
     df_t_1 = pull_positions_raw(epoch_t_1)
 
     df_t.to_csv('epoch_t.csv', index=False)
     df_t_1.to_csv('df_t_1.csv', index=False)
+    time_t = df_t['timestamp'][0]
+    time_t_1 = df_t_1['timestamp'][0]
 
     df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
 
-    df_t, eur_usd_t, df_stable_t, df_crypto_t = process_dataframe(df_t, df_correction)
+    df_t, fx_t,  = process_dataframe(df_t, df_correction)
 
-    df_t_1, eur_usd_t_1, df_stable_t_1, df_crypto_t_1 = process_dataframe(df_t_1, df_correction)
+    df_t_1, fx_t_1, = process_dataframe(df_t_1, df_correction)
+    df = historical_diff(df_t_1, df_t)
+    df.to_csv('historical_diff.csv', index=False)
+    # printdf(df.head(2))
+    #
+    # sys.exit(1)
+    # df_split(df, stable)
+    df_crypto_t, df_stable_usd_t, df_stable_eur_t, df_stable_t = df_split(df_t, stable)
+    df_crypto_t_1, df_stable_usd_t_1, df_stable_eur_t_1, df_stable_t_1 = df_split(df_t_1, stable)
 
-    print(f'EUR/USD_T: {eur_usd_t},\nEUR/USD_T-1: {eur_usd_t_1}')
+    print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
     df_crypto_2t = df_crypto_t.merge(df_crypto_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
-
-    print(f'\nThe crypto delta between {df_crypto_2t['timestamp_t_1'][0]} and {df_crypto_2t['timestamp_t'][0]}is:')
-    delta_dict = delta_overview(df_crypto_2t, eur_usd_t,eur_usd_t_1)
-    # print(delta_dict)
+    df_breaks = recon_breaks(df_crypto_2t, threshold)
+    printdf(df_breaks)
+    print(f'\nThe crypto delta between {time_t_1} and {time_t}is:')
+    delta_overview(df_crypto_2t, fx_t,fx_t_1)
 
     df_stable_2t = df_stable_t.merge(df_stable_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
-    print(f'\nThe stable delta between {df_crypto_2t['timestamp_t_1'][0]} and {df_crypto_2t['timestamp_t'][0]}is:')
-    delta_dict = delta_overview(df_stable_2t, eur_usd_t ,eur_usd_t_1 )
+    df_stable_usd_2t = df_stable_usd_t.merge(df_stable_usd_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
+    df_stable_eur_2t = df_stable_eur_t.merge(df_stable_eur_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
 
+    print(f'\nThe stable delta between {time_t_1} and {time_t}is:')
+    delta_overview(df_stable_2t, fx_t, fx_t_1)
+    print(f'\nThe USD stable delta between {time_t_1} and {time_t}is:')
+    delta_overview(df_stable_usd_2t, fx_t ,fx_t_1 )
+    print(f'\nThe EUR delta between {time_t_1} and {time_t}is:')
+    delta_overview(df_stable_eur_2t, fx_t ,fx_t_1 )
 
 
 
