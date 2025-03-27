@@ -1,0 +1,21 @@
+account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_native;diff_nominal;nominal_quantity;epoch;timestamp;;comments
+;ERN;1.52;;;;;;;25281;;;
+;ERN;1.36;;;;;;;25587;;;
+;ERN;1.67;;;;;;;25017;;;
+;BNX;;;;;-81;;;25873;;;
+;XRP;;;;;98531;;;25873;;;
+;FORM;1.69;;;;;;;25873;;;
+;FORM;1.69;;;;;;;26161;;;
+;BNB;;;;;226;;;26447;;;
+;BNB;;;;;226;;;26733;;;
+;BNB;;;;;226;;;27021;;;
+;BNB;;;;;226;;;27308;;;
+;USDC;;;;;1907184;;;27308;;;
+;ZETA;;;;;-728;;;27596;;;YF positions are not correctly fetched
+;GPS;;;;;;;;27596;;;YF positions are not correctly fetched
+;AUCTION;;;;;-3;;;27883;;;
+;ZETA;;;;;-728;;;27883;;;
+;EUR;;;;;-21202279;;;27903;;;
+;ZIG;;;;;0;;;27903;;;Thomas will solve this, wrong address in Kucoin
+;ZIG;;;;;0;;;28171;;;
+;ATOM;;;;;34241;;;28171;;;
