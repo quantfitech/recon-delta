@@ -9,7 +9,6 @@ import seaborn as sns
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 import shutil
-from forecast import forecast
 from sklearn.datasets import load_iris
 
 from datetime import datetime, timezone
@@ -142,19 +141,19 @@ def compute_diff_native(df):
     return df
 
 def df_split(df, stable):
-    # 1. df_crypto: asset not in stable
+    #  df_crypto: asset not in stable
     df_crypto = df[~df['asset'].isin(stable)]
 
-    # 2. df_stable_eur: asset == 'EUR'
-    df_stable_eur = df[df['asset'] == stable[0]]
-
-    # 3. df_stable_usd: asset in stable excluding 'EUR'
-    df_stable_usd = df[df['asset'].isin(stable[1:])]
-
-    # 4. df_stable: asset in stable
+    #  df_stable: asset in stable
     df_stable = df[df['asset'].isin(stable)]
 
-    return df_crypto, df_stable_usd, df_stable_eur, df_stable
+    #  df_stable_usd: asset in stable excluding 'EUR'
+    df_stable_usd = df[df['asset'].isin(stable[1:])]
+
+    #  df_stable_eur: asset == 'EUR'
+    df_stable_eur = df[df['asset'] == stable[0]]
+
+    return df_crypto, df_stable, df_stable_usd, df_stable_eur
 
 def delta_overview(df, eur_usd_t,eur_usd_t_1):
 
@@ -164,6 +163,7 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
     long_equity = df.loc[df["diff_nominal_t"] > 0, "diff_nominal_t"].sum() / eur_usd_t
     short_equity = df.loc[df["diff_nominal_t"] < 0, "diff_nominal_t"].sum() / eur_usd_t
     equity_lag = (df['diff_native_t_1'] * df['price_t']).sum() / eur_usd_t
+
     aum_t_1 = df['current_nominal_t_1'].sum() / eur_usd_t_1
     equity_t_1 = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
     delta_equity = (equity_t - equity_t_1)
@@ -216,48 +216,62 @@ def recon_breaks(df, threshold):
     df_breaks = df_breaks.reindex(df_breaks['break_nominal'].abs().sort_values(ascending=False).index)
 
     return df_breaks
-def historical_diff(df, df_new):
-    df = extract_diff_native_column(df)
-    new_col_df = extract_diff_native_column(df_new)
 
-    df = df.merge(new_col_df, on='asset', how='outer')
+def historical_diff(df, df_new):
+    new_col_df = extract_diff_native_column(df_new)
+    df = extract_diff_native_column(df)
+
+    if new_col_df.empty:
+        return df  # skip if nothing to merge
+
+    # Get the name of the new column (besides 'asset')
+    new_col_name = [col for col in new_col_df.columns if col != 'asset'][0]
+
+    if new_col_name in df.columns:
+        # Replace values in that column for matching assets
+        df = df.set_index('asset')
+        new_col_df = new_col_df.set_index('asset')
+
+        df.update(new_col_df)  # only updates the existing column
+        df = df.reset_index()
+    else:
+        # New date — merge as new column
+        df = df.merge(new_col_df, on='asset', how='outer')
+
     return df
 
 def extract_diff_native_column(df):
-    date_str = pd.to_datetime(df['timestamp'].iloc[0]).strftime('%Y%m%d')
-    column_name = f'diff_native_{date_str}'
-    return df[['asset', 'diff_native']].rename(columns={'diff_native': column_name})
+    try:
+        date_str = pd.to_datetime(df['timestamp'].iloc[0]).strftime('%Y%m%d')
+        column_name = f'diff_native_{date_str}'
+        return df[['asset', 'diff_native']].rename(columns={'diff_native': column_name})
+    except Exception:
+        return df
+
+def get_processed_df(epoch,df_correction):
+    df = pull_positions_raw(epoch)
+    timestamp = df['timestamp'].iloc[0]
+    df, fx = process_dataframe(df, df_correction)
+    return df, fx, timestamp
+
+# Usage:
 
 def main():
     # if the nominal amount of the differences is greater than the threshold we check the break
     threshold = 1000
-    epoch_t = 27903
-    epoch_t_1 = 27596
-    # df_epoch = pd.read_csv('epoch.csv')
-    # print(df_epoch)
-    # sys.exit(1)
-
-    df_t = pull_positions_raw(epoch_t)
-    df_t_1 = pull_positions_raw(epoch_t_1)
-
-    df_t.to_csv('epoch_t.csv', index=False)
-    df_t_1.to_csv('df_t_1.csv', index=False)
-    time_t = df_t['timestamp'][0]
-    time_t_1 = df_t_1['timestamp'][0]
-
+    epoch_t = 28171
+    epoch_t_1 = 27903
     df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
 
-    df_t, fx_t,  = process_dataframe(df_t, df_correction)
 
-    df_t_1, fx_t_1, = process_dataframe(df_t_1, df_correction)
-    df = historical_diff(df_t_1, df_t)
+    df_t, fx_t, time_t = get_processed_df(epoch_t, df_correction)
+    df_t_1, fx_t_1, time_t_1 = get_processed_df(epoch_t_1, df_correction)
+
+    df = pd.read_csv('historical_diff.csv')
+    df = historical_diff(df, df_t)
     df.to_csv('historical_diff.csv', index=False)
-    # printdf(df.head(2))
-    #
-    # sys.exit(1)
-    # df_split(df, stable)
-    df_crypto_t, df_stable_usd_t, df_stable_eur_t, df_stable_t = df_split(df_t, stable)
-    df_crypto_t_1, df_stable_usd_t_1, df_stable_eur_t_1, df_stable_t_1 = df_split(df_t_1, stable)
+    df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
+    df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
     print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
     df_crypto_2t = df_crypto_t.merge(df_crypto_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
