@@ -9,6 +9,8 @@ import seaborn as sns
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 import shutil
+from check_breaks import *
+from SIM_YF_income import *
 from sklearn.datasets import load_iris
 
 from datetime import datetime, timezone
@@ -31,9 +33,14 @@ HOST = os.getenv('MYSQL_HOST')
 DATABASE = os.getenv('MYSQL_DATABASE')
 
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
+
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
+epoch_t = 29778
+epoch_t_1 = 29496
+threshold = 1000
+start_date = "2025-04-01"
 
-
+# 10 march 8am - Epoch #23472
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
     max_width = shutil.get_terminal_size().columns
@@ -55,6 +62,21 @@ def pull_positions_raw(epoch_nr):
 
     with sql.connect() as db:
         result = db.execute(query_recon, {"epoch_nr": epoch_nr})
+        rows = result.fetchall()
+        df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
+    return df
+
+def pull_yf_mutations_raw(time_t, time_t_1):
+    query_recon = text("""
+        SELECT * FROM LedgerMutations l
+        WHERE timestamp < :time_t 
+          AND timestamp > :time_t_1
+          AND asset = 'USDT' 
+          AND subType = 'FUNDING_FEE';
+    """)
+
+    with sql.connect() as db:
+        result = db.execute(query_recon, {"time_t": time_t, "time_t_1": time_t_1})
         rows = result.fetchall()
         df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
     return df
@@ -248,37 +270,50 @@ def extract_diff_native_column(df):
     except Exception:
         return df
 
-def get_processed_df(epoch,df_correction):
-    df = pull_positions_raw(epoch)
+def get_processed_df(df,df_correction):
     timestamp = df['timestamp'].iloc[0]
     df, fx = process_dataframe(df, df_correction)
     return df, fx, timestamp
 
-# Usage:
 
 def main():
     # if the nominal amount of the differences is greater than the threshold we check the break
-    threshold = 1000
-    epoch_t = 28171
-    epoch_t_1 = 27903
 
     df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
 
+    df_t_raw = pull_positions_raw(epoch_t)
+    df_t_1_raw = pull_positions_raw(epoch_t_1)
 
-    df_t, fx_t, time_t = get_processed_df(epoch_t, df_correction)
-    df_t_1, fx_t_1, time_t_1 = get_processed_df(epoch_t_1, df_correction)
+    df_t, fx_t, time_t = get_processed_df(df_t_raw, df_correction)
+    df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw, df_correction)
+
+####################### YIELD FARMING AND SIM PROFITS #####################################
+
+    sim_profit = sim_profit_cal(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1, fx_t)
+
+    print(f'the SIM profit between {time_t_1} and {time_t} in EUR is: {sim_profit}')
+
+    df_yf = pull_yf_mutations_raw(time_t, time_t_1)
+    yf_profit = YF_profit_cal(df_yf, fx_t)
+    print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in EUR is: {yf_profit}')
+
 
     df = pd.read_csv('historical_diff.csv')
     df = historical_diff(df, df_t)
     df.to_csv('historical_diff.csv', index=False)
+
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
     print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
     df_crypto_2t = df_crypto_t.merge(df_crypto_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
-    df_breaks = recon_breaks(df_crypto_2t, threshold)
-    printdf(df_breaks)
+
+####################### BREAKS CHECK #####################################
+
+    check_breaks_income(df_crypto_2t, start_date)
     print(f'\nThe crypto delta between {time_t_1} and {time_t}is:')
+
+####################### DELTA OVERVIEW #####################################
     delta_overview(df_crypto_2t, fx_t,fx_t_1)
 
     df_stable_2t = df_stable_t.merge(df_stable_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
