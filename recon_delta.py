@@ -35,10 +35,10 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 29778
-epoch_t_1 = 29496
+epoch_t = 30066
+epoch_t_1 = 29778
 threshold = 1000
-start_date = "2025-04-01"
+start_date = end_date = "2025-04-02"
 
 # 10 march 8am - Epoch #23472
 def printdf(df: pd.DataFrame) -> None:
@@ -81,30 +81,22 @@ def pull_yf_mutations_raw(time_t, time_t_1):
         df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
     return df
 
-def plot(df):
-    x_column = 'epoch'  # Last column
-    y_column = 'diff_native' # Second column
+def plot(df, asset_name):
+    asset = df[df['asset'] == asset_name]
+
+    native_values = asset.drop(columns='asset').squeeze()
+
+    dates = [col.replace('diff_native_', '') for col in native_values.index]
+    dates = pd.to_datetime(dates, format='%Y%m%d')
 
     plt.figure(figsize=(10, 5))
-    plt.plot(df[x_column], df[y_column], linestyle='-', label=y_column)  # Removed marker='o'
-
-    # plt.xticks([df[x_column].iloc[0], df[x_column].iloc[-1]],
-    #            [df[x_column].iloc[0], df[x_column].iloc[-1]])
-    additional_ticks = np.linspace(df[x_column].min(), df[x_column].max(), num=15)  # 5 + first & last
-
-    # Set x-ticks including first, last, and additional ones
-    plt.xticks(additional_ticks.astype(int), additional_ticks.astype(int))
-
-    # Set first and last y-ticks
-    plt.yticks([df[y_column].iloc[0], df[y_column].iloc[-1]],
-               [df[y_column].iloc[0], df[y_column].iloc[-1]])
-    # plt.xlabel(x_column)
-    # plt.ylabel(y_column)
-    plt.title(f'The Native Diff For { df['asset'].iloc[0] }')
-    plt.legend()
+    plt.plot(dates, native_values.values, marker='o')
+    plt.title(f'{asset_name} Native Difference Records')
+    plt.xlabel('Date')
+    plt.ylabel('Native Value')
     plt.grid(True)
-
-    # Show the plot
+    plt.xticks(rotation=45)
+    plt.tight_layout()
     plt.show()
 
 def data_process(df):
@@ -287,7 +279,7 @@ def main():
     df_t, fx_t, time_t = get_processed_df(df_t_raw, df_correction)
     df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw, df_correction)
 
-####################### YIELD FARMING AND SIM PROFITS #####################################
+####################### YIELD FARMING AND SIM PROFITS #################################################################
 
     sim_profit = sim_profit_cal(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1, fx_t)
 
@@ -297,23 +289,24 @@ def main():
     yf_profit = YF_profit_cal(df_yf, fx_t)
     print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in EUR is: {yf_profit}')
 
+####################### HISTORICAL POSITIONS #################################################################
 
     df = pd.read_csv('historical_diff.csv')
     df = historical_diff(df, df_t)
     df.to_csv('historical_diff.csv', index=False)
-
+    # plot(df, 'OM')
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
     print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
     df_crypto_2t = df_crypto_t.merge(df_crypto_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
 
-####################### BREAKS CHECK #####################################
+####################### BREAKS CHECK #############################################################################################
 
-    check_breaks_income(df_crypto_2t, start_date)
+    check_breaks_income(df_crypto_2t, start_date, end_date)
     print(f'\nThe crypto delta between {time_t_1} and {time_t}is:')
 
-####################### DELTA OVERVIEW #####################################
+####################### DELTA OVERVIEW #############################################################################################
     delta_overview(df_crypto_2t, fx_t,fx_t_1)
 
     df_stable_2t = df_stable_t.merge(df_stable_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)

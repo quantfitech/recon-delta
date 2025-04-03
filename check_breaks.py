@@ -16,7 +16,7 @@ def check_delta(df):
 
     return df_breaks
 
-def expected_flow(start_date):
+def expected_flow(start_date, end_date):
     df_in = pd.read_csv('daily_incoming_rewards_march.csv', header=0)
     df_in['flow_native'] = df_in['Earn In Native Cm'] + df_in['Staking In Native Cm']
     df_in = df_in.rename(columns={
@@ -37,14 +37,17 @@ def expected_flow(start_date):
     df_out = df_out[keep_columns]
 
     df_flow = pd.concat([df_in, df_out], ignore_index=True)
-    df_flow = df_flow[(df_flow['date'] >= start_date)  ].copy()
+    df_flow = df_flow[
+        (df_flow['date'] >= start_date) &
+        (df_flow['date'] <= end_date)
+        ].copy()
     df_total = df_flow.groupby(['asset'], as_index=False)['flow_native'].sum()
     df_total.to_csv('income_rewards.csv', index=False)
 
     return df_total
 
-def check_breaks_income(df, start_date):
-    df_in_out_flow = expected_flow(start_date).copy()
+def check_breaks_income(df, start_date, end_date):
+    df_in_out_flow = expected_flow(start_date, end_date).copy()
 
     # Compute deltas and merge income flows
     df_breaks = check_delta(df).copy()
