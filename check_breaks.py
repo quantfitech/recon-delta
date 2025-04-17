@@ -2,6 +2,8 @@ import sys
 
 import pandas as pd
 from recon_delta import printdf as printdf
+from google.cloud import bigquery
+
 threshold = 1000
 
 def check_delta(df):
@@ -15,36 +17,6 @@ def check_delta(df):
     df_breaks.to_csv('recon_break_list.csv', index=False)
 
     return df_breaks
-
-def expected_flow(start_date, end_date):
-    df_in = pd.read_csv('daily_incoming_rewards_march.csv', header=0)
-    df_in['flow_native'] = df_in['Earn In Native Cm'] + df_in['Staking In Native Cm']
-    df_in = df_in.rename(columns={
-        'Transaction Date': "date",
-        'Asset': "asset",
-    })
-
-    df_out = pd.read_csv('daily_outgoing_rewards_march.csv', header= 0)
-    df_out['flow_native'] = -df_out['Sum Earn Reward Crypto'] - df_out['Sum Stake Reward Crypto']
-
-    df_out = df_out.rename(columns={
-        'Deposit Time Date': "date",
-        'Coin': "asset",
-    })
-
-    keep_columns = ["date", "asset", "flow_native"]
-    df_in = df_in[keep_columns]
-    df_out = df_out[keep_columns]
-
-    df_flow = pd.concat([df_in, df_out], ignore_index=True)
-    df_flow = df_flow[
-        (df_flow['date'] >= start_date) &
-        (df_flow['date'] <= end_date)
-        ].copy()
-    df_total = df_flow.groupby(['asset'], as_index=False)['flow_native'].sum()
-    df_total.to_csv('income_rewards.csv', index=False)
-
-    return df_total
 
 def check_breaks_income(df, start_date, end_date):
     df_in_out_flow = expected_flow(start_date, end_date).copy()
@@ -65,3 +37,35 @@ def check_breaks_income(df, start_date, end_date):
     printdf(df_breaks)
     return df_breaks
 
+def expected_flow(start_date, end_date):
+
+    client = bigquery.Client(project="bigdata-staging-cm")
+    query = "SELECT * FROM `bigdata-staging-cm.treasury_ml.coinmerce_incoming_outgoing_rewards_daily`"
+    df = client.query(query).to_dataframe()
+
+    df_flow = df[
+        (df['date'] >= start_date) &
+        (df['date'] <= end_date)
+        ].copy()
+    # print(df_flow.columns)
+    df_flow = df_flow.rename(columns={
+        'manual_input_finance_earn_in_native_cm': "earn_in",
+        'manual_input_finance_staking_in_native_cm': "stake_in",
+        'rewards_bonus_sum_earn_reward_crypto': "earn_out",
+        'rewards_bonus_sum_stake_reward_crypto': "stake_out",
+
+    })
+
+    df_flow['flow_in'] = df_flow['earn_in'] + df_flow['stake_in']
+    df_flow['flow_out'] = df_flow['earn_out'] + df_flow['stake_out']
+    df_flow['flow_native'] = (
+            df_flow['flow_in'].fillna(0).astype(float) - df_flow['flow_out'].fillna(0).astype(float)
+    )
+    keep_columns = ["date", "asset", "flow_native"]
+
+    df_flow = df_flow[keep_columns]
+    df_total = df_flow.groupby(['asset'], as_index=False)['flow_native'].sum()
+
+    printdf(df_flow)
+    printdf(df_total)
+    return df_total

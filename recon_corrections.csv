@@ -42,3 +42,35 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;ZIG;;;;;0;;;23472;;;
 ;ZIG;;;;;0;;;29778;;;Thomas will solve this, wrong address in Kucoin
 ;XRP;;;;;106377;;;29778;;;xrp loan was verkeerd geloggd, in plaats van - 1 miljoen stond er geen minnetje voor dus werd het plud 2 miljoen
+;SHIB;;;;;3254410944;;;30354;;;loan was verkeerd geloggd 
+;LTC;;;;;142;;;30354;;;loan was verkeerd geloggd 
+;INJ;;;;;25677;;;30354;;;epoch issues
+;FUN;;;;;206546;;;30929;;;epoch issues
+;ADA;;;;;-9386;;;20808;;;monthly corrections
+;SHIB;;;;;2946904661;;;20808;;;monthly corrections
+;XLM;;;;;196133;;;20808;;;monthly corrections
+;WAVES;;;;;50651;;;20808;;;monthly corrections
+;S;;;;;-1058658;;;20808;;;monthly corrections
+;ZIG;;;;;0;;;20808;;;monthly corrections
+;XRP;;;;;192494;;;31505;;;loan log issue
+;ADA;;;;;150213;;;31505;;;loan log issue
+;VRA;;;;;10591402;;;31505;;;epoch issues
+;BTC;;;;;30;;;31793;;;100 btc came back in the night
+;BNB;;;;;318;;;32369;;;launchPool 11,611 BNB 
+;USDC;;;;;22347867;;;32369;;;launchPool 8,766,30
+;BNB;;;;;318;;;32657;;;loan was verkeerd geloggd 
+;USDC;;;;;5325906;;;32657;;;launchPool  5,306,221 
+;USDC;;;;;5328196;;;32945;;;launchPool  5,306,221 
+;USDC;;;;;5312518;;;33233;;;launchPool  5,306,221 
+;ETC;;;;;336;;;34098;;;loan is logged but Kraken did not took it yet
+;NEAR;;;;;31042;;;34098;;;epoch issues
+;MKR;;;;;0;;;29778;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;33808;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;33525;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;33233;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;32945;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;32657;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;32369;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;32081;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;31793;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;MKR;;;;;0;;;29496;;;mistake from Kraken, accidentally put that 104 or so mkr on our account

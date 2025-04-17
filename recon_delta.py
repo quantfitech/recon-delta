@@ -13,8 +13,7 @@ from check_breaks import *
 from SIM_YF_income import *
 from sklearn.datasets import load_iris
 
-from datetime import datetime, timezone
-
+from datetime import datetime, timezone, timedelta
 
 # Ignore warnings
 warnings.filterwarnings("ignore")
@@ -35,12 +34,14 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 30066
-epoch_t_1 = 29778
-threshold = 1000
-start_date = end_date = "2025-04-02"
+epoch_t = 29778
+epoch_t_1 = 29496
 
-# 10 march 8am - Epoch #23472
+
+threshold = 1000
+n_data= 30
+asset_to_check = 'PROPC'
+
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
     max_width = shutil.get_terminal_size().columns
@@ -81,7 +82,7 @@ def pull_yf_mutations_raw(time_t, time_t_1):
         df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
     return df
 
-def plot(df, asset_name):
+def plot(df, asset_name, n_data):
     asset = df[df['asset'] == asset_name]
 
     native_values = asset.drop(columns='asset').squeeze()
@@ -90,7 +91,11 @@ def plot(df, asset_name):
     dates = pd.to_datetime(dates, format='%Y%m%d')
 
     plt.figure(figsize=(10, 5))
-    plt.plot(dates, native_values.values, marker='o')
+    # sort by date
+    sorted_pairs = sorted(zip(dates, native_values.values))
+    sorted_pairs = sorted_pairs[-n_data:]
+    sorted_dates, sorted_values = zip(*sorted_pairs)
+    plt.plot(sorted_dates, sorted_values, marker='o')
     plt.title(f'{asset_name} Native Difference Records')
     plt.xlabel('Date')
     plt.ylabel('Native Value')
@@ -269,10 +274,9 @@ def get_processed_df(df,df_correction):
 
 
 def main():
-    # if the nominal amount of the differences is greater than the threshold we check the break
 
     df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
-
+    print(df_correction[df_correction['epoch'].isin([epoch_t, epoch_t_1])][['asset', 'diff_native', 'epoch', 'comments']])
     df_t_raw = pull_positions_raw(epoch_t)
     df_t_1_raw = pull_positions_raw(epoch_t_1)
 
@@ -294,34 +298,32 @@ def main():
     df = pd.read_csv('historical_diff.csv')
     df = historical_diff(df, df_t)
     df.to_csv('historical_diff.csv', index=False)
-    # plot(df, 'OM')
+    plot(df, asset_to_check, n_data)
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
     print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
-    df_crypto_2t = df_crypto_t.merge(df_crypto_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
 
-####################### BREAKS CHECK #############################################################################################
-
-    check_breaks_income(df_crypto_2t, start_date, end_date)
-    print(f'\nThe crypto delta between {time_t_1} and {time_t}is:')
 
 ####################### DELTA OVERVIEW #############################################################################################
-    delta_overview(df_crypto_2t, fx_t,fx_t_1)
 
-    df_stable_2t = df_stable_t.merge(df_stable_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
-    df_stable_usd_2t = df_stable_usd_t.merge(df_stable_usd_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
-    df_stable_eur_2t = df_stable_eur_t.merge(df_stable_eur_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
+    df_crypto_2t = df_crypto_t.merge(df_crypto_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
 
-    print(f'\nThe stable delta between {time_t_1} and {time_t}is:')
-    delta_overview(df_stable_2t, fx_t, fx_t_1)
-    print(f'\nThe USD stable delta between {time_t_1} and {time_t}is:')
-    delta_overview(df_stable_usd_2t, fx_t ,fx_t_1 )
-    print(f'\nThe EUR delta between {time_t_1} and {time_t}is:')
-    delta_overview(df_stable_eur_2t, fx_t ,fx_t_1 )
+    datasets = [
+        ("crypto", df_crypto_t, df_crypto_t_1),
+        ("stable", df_stable_t, df_stable_t_1),
+        ("USD stable", df_stable_usd_t, df_stable_usd_t_1),
+        ("EUR stable", df_stable_eur_t, df_stable_eur_t_1),
+    ]
 
+    for label, df_t, df_t_1 in datasets:
+        df_merged = df_t.merge(df_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
+        print(f"\nThe {label} delta between {time_t_1} and {time_t} is:")
+        delta_overview(df_merged, fx_t, fx_t_1)
 
+    ####################### BREAKS CHECK #############################################################################################
 
+    check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1))
 
 
 
