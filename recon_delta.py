@@ -34,13 +34,13 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 29778
-epoch_t_1 = 29496
+epoch_t = 35646
+epoch_t_1 = 34098
 
 
-threshold = 1000
+threshold = 2000
 n_data= 30
-asset_to_check = 'PROPC'
+# asset_to_check = ['NEAR', 'LAYER', 'MASK']
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -123,7 +123,6 @@ def data_process(df):
     # df[float_columns] = df[float_columns].applymap(lambda x: f"{x:,.0f}" if pd.notna(x) else "0")
     return df
 
-
 def overwrite_values(df, df_correction):
 
     # Iterate through df2 and update df1 where asset and epoch match
@@ -148,7 +147,6 @@ def compute_diff_native(df):
     df_merged['diff_native'] = df_merged['current_quantity'] - df_merged['desired_quantity'].fillna(0)
     df_merged['diff_nominal'] = df_merged['diff_native'] * df_merged['price']
     df_merged['current_nominal'] = df_merged['current_quantity'] * df_merged['price']
-
 
     keep_columns = [
         "asset", "price", "current_quantity",
@@ -221,7 +219,6 @@ def process_dataframe(df,df_correction):
     df = compute_diff_native(df)
     df = overwrite_values(df, df_correction)
     eur_usd = df.loc[df['asset'] == 'EUR', 'price'].values
-    # df_crypto, df_stable_usd, df_stable_eur, df_stable = df_split(df, stable)
     return df, eur_usd
 
 def recon_breaks(df, threshold):
@@ -293,12 +290,8 @@ def main():
     yf_profit = YF_profit_cal(df_yf, fx_t)
     print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in EUR is: {yf_profit}')
 
-####################### HISTORICAL POSITIONS #################################################################
+####################### SPLIT THE DATE TO CRYPTO AND STABLES #################################################################
 
-    df = pd.read_csv('historical_diff.csv')
-    df = historical_diff(df, df_t)
-    df.to_csv('historical_diff.csv', index=False)
-    plot(df, asset_to_check, n_data)
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
@@ -321,11 +314,15 @@ def main():
         print(f"\nThe {label} delta between {time_t_1} and {time_t} is:")
         delta_overview(df_merged, fx_t, fx_t_1)
 
-    ####################### BREAKS CHECK #############################################################################################
+####################### BREAKS CHECK #############################################################################################
 
-    check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1))
-
-
+    asset_to_check = check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1))
+    df = pd.read_csv('historical_diff.csv')
+    df = historical_diff(df, df_t)
+    df.to_csv('historical_diff.csv', index=False)
+    # df = pd.read_csv('historical_diff.csv')
+    for asset in asset_to_check:
+        plot(df, asset, n_data)
 
 if __name__ == "__main__":
     main()

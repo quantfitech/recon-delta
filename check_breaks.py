@@ -4,7 +4,7 @@ import pandas as pd
 from recon_delta import printdf as printdf
 from google.cloud import bigquery
 
-threshold = 1000
+threshold = 2000
 
 def check_delta(df):
     df['delta_native'] = df['diff_native_t'] - df['diff_native_t_1']
@@ -35,7 +35,9 @@ def check_breaks_income(df, start_date, end_date):
     df_breaks = df_breaks.reindex(df_breaks['breaks_nominal'].abs().sort_values(ascending=False).index)
 
     printdf(df_breaks)
-    return df_breaks
+    filtered = df_breaks[df_breaks['breaks_nominal'].abs() > threshold]
+
+    return filtered['asset']
 
 def expected_flow(start_date, end_date):
 
