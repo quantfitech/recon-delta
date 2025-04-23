@@ -14,7 +14,7 @@ def check_delta(df):
 
     df_breaks = df[df['delta']][['asset', 'diff_native_t', 'diff_native_t_1', 'delta', 'delta_native', 'price_t', 'delta_nominal', 'timestamp_t']].copy()
     df_breaks = df_breaks.reindex(df_breaks['delta_nominal'].abs().sort_values(ascending=False).index)
-    df_breaks.to_csv('recon_break_list.csv', index=False)
+    # df_breaks.to_csv('recon_break_list.csv', index=False)
 
     return df_breaks
 
@@ -68,6 +68,6 @@ def expected_flow(start_date, end_date):
     df_flow = df_flow[keep_columns]
     df_total = df_flow.groupby(['asset'], as_index=False)['flow_native'].sum()
 
-    printdf(df_flow)
-    printdf(df_total)
+    # printdf(df_flow)
+    # printdf(df_total)
     return df_total

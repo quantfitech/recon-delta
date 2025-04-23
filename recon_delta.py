@@ -34,13 +34,13 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 35646
-epoch_t_1 = 34098
+epoch_t = 36032
+epoch_t_1 = 35646
 
 
 threshold = 2000
-n_data= 30
-# asset_to_check = ['NEAR', 'LAYER', 'MASK']
+n_data= 20
+asset_to_check = ['PROPC']
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -282,15 +282,16 @@ def main():
 
 ####################### YIELD FARMING AND SIM PROFITS #################################################################
 
-    sim_profit = sim_profit_cal(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1, fx_t)
+    sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
+    sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
 
-    print(f'the SIM profit between {time_t_1} and {time_t} in EUR is: {sim_profit}')
+    print(f'the SIM profit between {time_t_1} and {time_t} in EUR is: {sim_profit} (ref: {sim_profit_usdt})')
 
     df_yf = pull_yf_mutations_raw(time_t, time_t_1)
     yf_profit = YF_profit_cal(df_yf, fx_t)
     print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in EUR is: {yf_profit}')
 
-####################### SPLIT THE DATE TO CRYPTO AND STABLES #################################################################
+####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
@@ -316,7 +317,8 @@ def main():
 
 ####################### BREAKS CHECK #############################################################################################
 
-    asset_to_check = check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1))
+    asset_to_check.extend(check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1)))
+    print(asset_to_check)
     df = pd.read_csv('historical_diff.csv')
     df = historical_diff(df, df_t)
     df.to_csv('historical_diff.csv', index=False)

@@ -1,4 +1,5 @@
 account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_native;diff_nominal;nominal_quantity;epoch;timestamp;;comments
+;;;;;;;;;;;;
 ;ERN;1.52;;;;;;;25281;;;
 ;ERN;1.36;;;;;;;25587;;;
 ;ERN;1.67;;;;;;;25017;;;
@@ -74,3 +75,4 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;MKR;;;;;0;;;32081;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
 ;MKR;;;;;0;;;31793;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
 ;MKR;;;;;0;;;29496;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
+;NEAR;;;;;31372;;;35845;;;epoch issues
