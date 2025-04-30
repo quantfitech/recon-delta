@@ -76,3 +76,10 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;MKR;;;;;0;;;31793;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
 ;MKR;;;;;0;;;29496;;;mistake from Kraken, accidentally put that 104 or so mkr on our account
 ;NEAR;;;;;31372;;;35845;;;epoch issues
+;BTC;;;;;0.478959;;;36064;;;loan log issue
+;LAYER;;;;;-5;;;36064;;;epoch issues
+;MASK;;;;;-720;;;36064;;;epoch issues
+;XTZ;;;;;1932;;;36064;;;epoch issues
+;AUCTION;;;;;-5;;;36064;;;epoch issues
+;ZETA;;;;;-733;;;36064;;;epoch issues
+;API3;;;;;-46;;;36064;;;epoch issues

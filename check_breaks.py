@@ -4,13 +4,13 @@ import pandas as pd
 from recon_delta import printdf as printdf
 from google.cloud import bigquery
 
-threshold = 2000
+threshold = 1500
 
 def check_delta(df):
     df['delta_native'] = df['diff_native_t'] - df['diff_native_t_1']
     df['delta_nominal'] = df['delta_native'] * df['price_t']
 
-    df['delta']  = abs(df['delta_nominal']) > threshold/2
+    df['delta']  = abs(df['delta_nominal']) > threshold
 
     df_breaks = df[df['delta']][['asset', 'diff_native_t', 'diff_native_t_1', 'delta', 'delta_native', 'price_t', 'delta_nominal', 'timestamp_t']].copy()
     df_breaks = df_breaks.reindex(df_breaks['delta_nominal'].abs().sort_values(ascending=False).index)
@@ -68,6 +68,4 @@ def expected_flow(start_date, end_date):
     df_flow = df_flow[keep_columns]
     df_total = df_flow.groupby(['asset'], as_index=False)['flow_native'].sum()
 
-    # printdf(df_flow)
-    # printdf(df_total)
     return df_total

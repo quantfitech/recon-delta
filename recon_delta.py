@@ -34,11 +34,11 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 36032
-epoch_t_1 = 35646
+epoch_t = 36579
+epoch_t_1 = 36432
 
 
-threshold = 2000
+# threshold = 2000
 n_data= 20
 asset_to_check = ['PROPC']
 
@@ -81,6 +81,24 @@ def pull_yf_mutations_raw(time_t, time_t_1):
         rows = result.fetchall()
         df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
     return df
+
+def get_rfqs(start_time, end_time):
+
+    query_volumes = text("""
+        SELECT * FROM RequestForQuotes
+        WHERE acceptedAt IS NOT NULL
+        AND executedAt IS NOT NULL
+        AND executedAt BETWEEN :start_time AND :end_time;
+    """)
+
+    with sql.connect() as db:
+        result = db.execute(query_volumes, {
+            "start_time": start_time,
+            "end_time": end_time
+        })
+        df = pd.DataFrame(result.fetchall(), columns=result.keys())
+    return df
+
 
 def plot(df, asset_name, n_data):
     asset = df[df['asset'] == asset_name]
@@ -157,6 +175,30 @@ def compute_diff_native(df):
     # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
     return df
 
+def compute_diff_native1(df):
+    df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
+
+    desired_quantity_sum = df_filtered.groupby(['asset','price',  'epoch'])['desired_quantity'].sum().reset_index()
+    desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
+
+    current_quantity_sum = df.groupby(['asset', 'price',  'epoch'])['current_quantity'].sum().reset_index()
+    current_quantity_sum.rename(columns={'current_quantity': 'current_quantity'}, inplace=True)
+
+    df_merged = current_quantity_sum.merge(desired_quantity_sum, on=['asset', 'price', 'epoch'], how='left')
+
+    df_merged['diff_native'] = df_merged['current_quantity'] - df_merged['desired_quantity'].fillna(0)
+    df_merged['diff_nominal'] = df_merged['diff_native'] * df_merged['price']
+    df_merged['current_nominal'] = df_merged['current_quantity'] * df_merged['price']
+
+    keep_columns = [
+        "asset", "price", "current_quantity",
+        "current_nominal", "diff_native", "diff_nominal", "epoch",
+    ]
+
+    df = df_merged[keep_columns]
+    # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
+    return df
+
 def df_split(df, stable):
     #  df_crypto: asset not in stable
     df_crypto = df[~df['asset'].isin(stable)]
@@ -176,6 +218,7 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
 
     aum_t = df['current_nominal_t'].sum() / eur_usd_t
     equity_t = (df['diff_native_t'] * df['price_t']).sum()/ eur_usd_t
+
     df["diff_nominal_t"] = df['diff_native_t'] * df['price_t']
     long_equity = df.loc[df["diff_nominal_t"] > 0, "diff_nominal_t"].sum() / eur_usd_t
     short_equity = df.loc[df["diff_nominal_t"] < 0, "diff_nominal_t"].sum() / eur_usd_t
@@ -184,12 +227,12 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
     aum_t_1 = df['current_nominal_t_1'].sum() / eur_usd_t_1
     equity_t_1 = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
     delta_equity = (equity_t - equity_t_1)
+
     delta_aum = (aum_t - aum_t_1)
     delta_price_diff = ((df['price_t'] - df['price_t_1']) * df['diff_native_t_1']).sum() / eur_usd_t
     delta_pos_diff = ((df['diff_native_t'] - df['diff_native_t_1']) * df['price_t']).sum() / eur_usd_t
     delta_fx_diff = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t - (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
     delta_market_diff = delta_price_diff + delta_fx_diff
-
     delta_dict = {
         # "aum_t": int(aum_t),
         # "aum_t_1": int(aum_t_1),
@@ -215,8 +258,8 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
 
 def process_dataframe(df,df_correction):
     df = data_process(df)
-
     df = compute_diff_native(df)
+
     df = overwrite_values(df, df_correction)
     eur_usd = df.loc[df['asset'] == 'EUR', 'price'].values
     return df, eur_usd
@@ -282,11 +325,14 @@ def main():
 
 ####################### YIELD FARMING AND SIM PROFITS #################################################################
 
+    df_orders= get_rfqs(time_t_1, time_t)
+    # printdf(df_orders.head()) #quoteQuantity
+    total_volume = sim_volumne(df_orders)
     sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
     sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
 
-    print(f'the SIM profit between {time_t_1} and {time_t} in EUR is: {sim_profit} (ref: {sim_profit_usdt})')
-
+    print(f'the SIM profit between {time_t_1} and {time_t} in EUR is: {sim_profit/fx_t} (ref: {sim_profit_usdt/fx_t})')
+    print(f'the estimate for SIM profit based on trades volume {total_volume} in EUR is between {total_volume *0.8*0.01/fx_t} and {total_volume *1.0*0.01/fx_t})')
     df_yf = pull_yf_mutations_raw(time_t, time_t_1)
     yf_profit = YF_profit_cal(df_yf, fx_t)
     print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in EUR is: {yf_profit}')
@@ -310,8 +356,8 @@ def main():
         ("EUR stable", df_stable_eur_t, df_stable_eur_t_1),
     ]
 
-    for label, df_t, df_t_1 in datasets:
-        df_merged = df_t.merge(df_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
+    for label, df_t_p, df_t_1_p in datasets:
+        df_merged = df_t_p.merge(df_t_1_p, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
         print(f"\nThe {label} delta between {time_t_1} and {time_t} is:")
         delta_overview(df_merged, fx_t, fx_t_1)
 
@@ -320,6 +366,7 @@ def main():
     asset_to_check.extend(check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1)))
     print(asset_to_check)
     df = pd.read_csv('historical_diff.csv')
+
     df = historical_diff(df, df_t)
     df.to_csv('historical_diff.csv', index=False)
     # df = pd.read_csv('historical_diff.csv')
