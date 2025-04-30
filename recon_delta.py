@@ -326,7 +326,6 @@ def main():
 ####################### YIELD FARMING AND SIM PROFITS #################################################################
 
     df_orders= get_rfqs(time_t_1, time_t)
-    # printdf(df_orders.head()) #quoteQuantity
     total_volume = sim_volumne(df_orders)
     sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
     sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
