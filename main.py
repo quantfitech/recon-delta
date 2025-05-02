@@ -64,38 +64,6 @@ def pull_positions_raw(epoch_nr):
         df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
     return df
 
-def pull_yf_mutations_raw(time_t, time_t_1):
-    query_recon = text("""
-        SELECT * FROM LedgerMutations l
-        WHERE timestamp < :time_t 
-          AND timestamp > :time_t_1
-          AND asset = 'USDT' 
-          AND subType = 'FUNDING_FEE';
-    """)
-
-    with sql.connect() as db:
-        result = db.execute(query_recon, {"time_t": time_t, "time_t_1": time_t_1})
-        rows = result.fetchall()
-        df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
-    return df
-
-def get_rfqs(start_time, end_time):
-
-    query_volumes = text("""
-        SELECT * FROM RequestForQuotes
-        WHERE acceptedAt IS NOT NULL
-        AND executedAt IS NOT NULL
-        AND executedAt BETWEEN :start_time AND :end_time;
-    """)
-
-    with sql.connect() as db:
-        result = db.execute(query_volumes, {
-            "start_time": start_time,
-            "end_time": end_time
-        })
-        df = pd.DataFrame(result.fetchall(), columns=result.keys())
-    return df
-
 
 def plot(df, asset_name, n_data):
     asset = df[df['asset'] == asset_name]
