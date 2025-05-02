@@ -23,8 +23,8 @@ def sim_volumne(df):
     total_volume = df['quoteQuantity'].sum()
     return total_volume
 
-def YF_profit_cal (df,fx):
+def YF_profit_cal (df):
     yf_profit = df['quantity'].sum()
-    yf_profit = float(yf_profit) / fx
+    yf_profit = float(yf_profit)
     return yf_profit
 

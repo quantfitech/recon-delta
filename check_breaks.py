@@ -4,7 +4,7 @@ import pandas as pd
 from recon_delta import printdf as printdf
 from google.cloud import bigquery
 
-threshold = 1500
+threshold = 2000
 
 def check_delta(df):
     df['delta_native'] = df['diff_native_t'] - df['diff_native_t_1']
@@ -49,7 +49,6 @@ def expected_flow(start_date, end_date):
         (df['date'] >= start_date) &
         (df['date'] <= end_date)
         ].copy()
-    # print(df_flow.columns)
     df_flow = df_flow.rename(columns={
         'manual_input_finance_earn_in_native_cm': "earn_in",
         'manual_input_finance_staking_in_native_cm': "stake_in",
@@ -60,12 +59,19 @@ def expected_flow(start_date, end_date):
 
     df_flow['flow_in'] = df_flow['earn_in'] + df_flow['stake_in']
     df_flow['flow_out'] = df_flow['earn_out'] + df_flow['stake_out']
+    df_flow['fiat_in'] = df_flow['manual_input_finance_earn_in_fiat_cm'] + df_flow['manual_input_finance_staking_in_fiat_cm']
+    df_flow['fiat_out'] = df_flow['rewards_bonus_sum_earn_reward_fiat'] + df_flow['rewards_bonus_sum_stake_reward_fiat']
+
     df_flow['flow_native'] = (
             df_flow['flow_in'].fillna(0).astype(float) - df_flow['flow_out'].fillna(0).astype(float)
     )
-    keep_columns = ["date", "asset", "flow_native"]
+
+    df_flow['flow_fiat'] = (
+            df_flow['fiat_in'].fillna(0).astype(float) - df_flow['fiat_out'].fillna(0).astype(float)
+    )
+    keep_columns = ["date", "asset", "flow_native", "flow_fiat"]
 
     df_flow = df_flow[keep_columns]
-    df_total = df_flow.groupby(['asset'], as_index=False)['flow_native'].sum()
-
+    df_total = df_flow.groupby(['asset'], as_index=False)[['flow_native','flow_fiat']].sum()
+    print(f'\nThe total net income between {start_date} and { end_date} is : {df_total['flow_fiat'].sum()} USD')
     return df_total

@@ -34,13 +34,13 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 36579
-epoch_t_1 = 36432
+epoch_t = 36432
+epoch_t_1 = 36334
 
 
 # threshold = 2000
 n_data= 20
-asset_to_check = ['PROPC']
+asset_to_check = []
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -330,11 +330,11 @@ def main():
     sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
     sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
 
-    print(f'the SIM profit between {time_t_1} and {time_t} in EUR is: {sim_profit/fx_t} (ref: {sim_profit_usdt/fx_t})')
-    print(f'the estimate for SIM profit based on trades volume {total_volume} in EUR is between {total_volume *0.8*0.01/fx_t} and {total_volume *1.0*0.01/fx_t})')
+    print(f'the SIM profit between {time_t_1} and {time_t} in USD is: {sim_profit} (ref: {sim_profit_usdt})')
+    print(f'the estimate for SIM profit based on trades volume [{total_volume}] in USD is between {total_volume *0.8*0.01} and {total_volume *1.0*0.01})')
     df_yf = pull_yf_mutations_raw(time_t, time_t_1)
-    yf_profit = YF_profit_cal(df_yf, fx_t)
-    print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in EUR is: {yf_profit}')
+    yf_profit = YF_profit_cal(df_yf)
+    print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in USD is: {yf_profit}')
 
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
