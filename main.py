@@ -33,8 +33,8 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 36723
-epoch_t_1 = 36579
+epoch_t = 37591
+epoch_t_1 = 37446
 
 n_data= 20
 asset_to_check = []
