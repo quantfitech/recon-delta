@@ -28,3 +28,19 @@ def YF_profit_cal (df):
     yf_profit = float(yf_profit)
     return yf_profit
 
+def get_stable_pos_stable(df, stable):
+
+    df_eur = df[df['asset'] == 'EUR']
+    eur_bank = (
+            df_eur.loc[df_eur['account'] == 'BANK', 'current_quantity'].iloc[0] -
+            df_eur.loc[df_eur['account'] == 'COINMERCE', 'desired_quantity'].iloc[0]
+    )
+
+    df_stable = df[df['asset'].isin(stable)]
+    df_filtered = df_stable[df_stable['account'].isin(['SI', 'YIELD_FARM'])]
+    df_sim_yf = df_filtered.groupby(['account'])['nominal_difference'].sum().reset_index()
+
+    si = df_sim_yf[df_sim_yf['account'] == 'SI']['nominal_difference'].iloc[0]
+    yf = df_sim_yf[df_sim_yf['account'] == 'YIELD_FARM']['nominal_difference'].iloc[0]
+    # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
+    return yf, si, eur_bank

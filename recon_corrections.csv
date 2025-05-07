@@ -84,3 +84,9 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;ZETA;;;;;-733;;;36064;;;epoch issues
 ;API3;;;;;-46;;;36064;;;epoch issues
 ;HIVE;;;;;-17512;;;36723;;;epoch issues
+;SOL;;;;;6735;;;37446;;;loan back from wincent not logged
+;FUN;;;;;206523;;;37446;;;epoch issues
+;GUN;;;;;-126;;;37446;;;epoch issues
+;VRA;;;;;14014938;;;37446;;;vera wallets
+;SOL;;;;;6760;;;37591;;;loan back from wincent not logged
+;BNB;;;;;307;;;37591;;;launchPool 11,618 BNB 
