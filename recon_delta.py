@@ -34,8 +34,8 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 36432
-epoch_t_1 = 36334
+epoch_t = 37446
+epoch_t_1 = 37301
 
 
 # threshold = 2000
@@ -175,29 +175,16 @@ def compute_diff_native(df):
     # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
     return df
 
-def compute_diff_native1(df):
-    df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
+def get_stable_pos_sim_yf(df, stable):
 
-    desired_quantity_sum = df_filtered.groupby(['asset','price',  'epoch'])['desired_quantity'].sum().reset_index()
-    desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
-
-    current_quantity_sum = df.groupby(['asset', 'price',  'epoch'])['current_quantity'].sum().reset_index()
-    current_quantity_sum.rename(columns={'current_quantity': 'current_quantity'}, inplace=True)
-
-    df_merged = current_quantity_sum.merge(desired_quantity_sum, on=['asset', 'price', 'epoch'], how='left')
-
-    df_merged['diff_native'] = df_merged['current_quantity'] - df_merged['desired_quantity'].fillna(0)
-    df_merged['diff_nominal'] = df_merged['diff_native'] * df_merged['price']
-    df_merged['current_nominal'] = df_merged['current_quantity'] * df_merged['price']
-
-    keep_columns = [
-        "asset", "price", "current_quantity",
-        "current_nominal", "diff_native", "diff_nominal", "epoch",
-    ]
-
-    df = df_merged[keep_columns]
+    df_stable = df[df['asset'].isin(stable)]
+    df_filtered = df_stable[df_stable['account'].isin(['SI', 'YIELD_FARM'])]
+    df_sim_yf = df_filtered.groupby(['account'])['nominal_difference'].sum().reset_index()
+    print(df_sim_yf)
+    si = df_sim_yf[df_sim_yf['account'] == 'SI']['nominal_difference']
+    yf = df_sim_yf[df_sim_yf['account'] == 'YIELD_FARM']['nominal_difference']
     # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
-    return df
+    return si, yf
 
 def df_split(df, stable):
     #  df_crypto: asset not in stable
@@ -335,10 +322,19 @@ def main():
     df_yf = pull_yf_mutations_raw(time_t, time_t_1)
     yf_profit = YF_profit_cal(df_yf)
     print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in USD is: {yf_profit}')
+    SI_t, YF_t = get_stable_pos_sim_yf(df_t_raw, stable)
+    SI, YF = get_stable_pos_sim_yf(df_t_1_raw, stable)
+
+    print(f'the SIM and YIELD FARMING balance at {time_t} in USD is: {SI_t}, {YF_t}')
+    print(f'the SIM and YIELD FARMING balance at {time_t_1} in USD is: {SI}, {YF}')
+    sys.exit(1)
 
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
+    printdf(df_stable_t)
+
+
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
     print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
