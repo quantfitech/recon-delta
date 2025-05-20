@@ -137,7 +137,6 @@ def df_split(df, stable):
 
 def delta_overview(df, eur_usd_t,eur_usd_t_1):
 
-    aum_t = df['current_nominal_t'].sum() / eur_usd_t
     equity_t = (df['diff_native_t'] * df['price_t']).sum()/ eur_usd_t
 
     df["diff_nominal_t"] = df['diff_native_t'] * df['price_t']
@@ -145,23 +144,16 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
     short_equity = df.loc[df["diff_nominal_t"] < 0, "diff_nominal_t"].sum() / eur_usd_t
     equity_lag = (df['diff_native_t_1'] * df['price_t']).sum() / eur_usd_t
 
-    aum_t_1 = df['current_nominal_t_1'].sum() / eur_usd_t_1
     equity_t_1 = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
     delta_equity = (equity_t - equity_t_1)
 
-    delta_aum = (aum_t - aum_t_1)
     delta_price_diff = ((df['price_t'] - df['price_t_1']) * df['diff_native_t_1']).sum() / eur_usd_t
     delta_pos_diff = ((df['diff_native_t'] - df['diff_native_t_1']) * df['price_t']).sum() / eur_usd_t
     delta_fx_diff = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t - (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
-    delta_market_diff = delta_price_diff + delta_fx_diff
     delta_dict = {
-        # "aum_t": int(aum_t),
-        # "aum_t_1": int(aum_t_1),
-        # "delta_aum": int(delta_aum),
 
         "equity_t": int(equity_t),
         "equity_t_1": int(equity_t_1),
-
         "long_equity": int(long_equity),
         "short_equity": int(short_equity),
         "equity_lag": int(equity_lag),
@@ -169,7 +161,41 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
         "delta_price_diff": int(delta_price_diff),
         "delta_pos_diff": int(delta_pos_diff),
         "delta_fx_diff": int(delta_fx_diff),
-        "delta_market_diff": int(delta_market_diff)
+
+    }
+
+    for key, value in delta_dict.items():
+        print(f"{key}: {value:,}")
+    return delta_dict
+
+
+
+def delta_overview_stable(df_eur, df_usd, eur_usd_t, eur_usd_t_1):
+    equity_t_eur = (df_eur['diff_native_t'] * df_eur['price_t']).sum() / eur_usd_t
+
+    df_eur["diff_nominal_t"] = df_eur['diff_native_t'] * df_eur['price_t']
+    equity_t_1_eur = (df_eur['diff_native_t_1'] * df_eur['price_t_1']).sum() / eur_usd_t_1
+    equity_t_usd = (df_usd['diff_native_t'] * df_usd['price_t']).sum() / eur_usd_t
+    df_usd["diff_nominal_t"] = df_usd['diff_native_t'] * df_usd['price_t']
+    equity_t_1_usd = (df_usd['diff_native_t_1'] * df_usd['price_t_1']).sum() / eur_usd_t_1
+    delta_price_diff_usd = ((df_usd['price_t'] - df_usd['price_t_1']) * df_usd['diff_native_t_1']).sum() / eur_usd_t
+    delta_pos_diff_usd = ((df_usd['diff_native_t'] - df_usd['diff_native_t_1']) * df_usd['price_t']).sum() / eur_usd_t
+    delta_fx_diff_usd = (df_usd['diff_native_t_1'] * df_usd['price_t_1']).sum() / eur_usd_t - (
+                df_usd['diff_native_t_1'] * df_usd['price_t_1']).sum() / eur_usd_t_1
+    delta_market_diff_usd = delta_price_diff_usd + delta_fx_diff_usd
+
+    delta_dict = {
+
+        "stable wallets T": int(equity_t_eur + equity_t_usd),
+        "stable wallets T-1": int(equity_t_1_eur + equity_t_1_usd),
+        "EUR Position": int(equity_t_eur),
+        "USD Stable Position": int(equity_t_usd),
+        "Delta Stables": int(equity_t_eur + equity_t_usd - (equity_t_1_eur + equity_t_1_usd)),
+        "Delta EUR": int(equity_t_eur - equity_t_1_eur),
+        "Delta USD": int(equity_t_usd - equity_t_1_usd),
+
+        "USD - Delta FX Difference": int(delta_market_diff_usd),
+        "USD - Delta Position Difference": int(delta_pos_diff_usd)
 
     }
 
@@ -226,18 +252,26 @@ def main():
     datasets = [
         ("crypto", df_crypto_t, df_crypto_t_1),
         ("stable", df_stable_t, df_stable_t_1),
-        ("USD stable", df_stable_usd_t, df_stable_usd_t_1),
-        ("EUR stable", df_stable_eur_t, df_stable_eur_t_1),
+        ("USD", df_stable_usd_t, df_stable_usd_t_1),
+        ("EUR", df_stable_eur_t, df_stable_eur_t_1),
     ]
 
-    for label, df_t_p, df_t_1_p in datasets:
-        df_merged = df_t_p.merge(df_t_1_p, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
-        print(f"\nThe {label} delta between {time_t_1} and {time_t} is:")
-        delta_overview(df_merged, fx_t, fx_t_1)
+
+    merged_datasets = {}
+
+    for label, data_t, data_t_1 in datasets:
+        df_merged = data_t.merge(data_t_1, on="asset", how="outer", suffixes=("_t", "_t_1")).fillna(0)
+        key = f"merged_{label.lower().replace(' ', '_')}"  # e.g. "USD stable" → "merged_usd_stable"
+        merged_datasets[key] = df_merged
+
+    print(f"\nThe A) Crypto wallets delta between {time_t_1} and {time_t} is:")
+    delta_overview(merged_datasets["merged_crypto"], fx_t, fx_t_1)
+    print(f"\nThe B) Euro & Stables wallets delta between {time_t_1} and {time_t} is:")
+    delta_overview_stable(merged_datasets["merged_eur"], merged_datasets["merged_usd"],fx_t, fx_t_1)
 
 ####################### BREAKS CHECK #############################################################################################
 
-    asset_to_check.extend(check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1)))
+    check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1))
 
 
 if __name__ == "__main__":
