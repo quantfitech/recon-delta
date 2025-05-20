@@ -152,20 +152,21 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
     delta_fx_diff = (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t - (df['diff_native_t_1'] * df['price_t_1']).sum() / eur_usd_t_1
     delta_dict = {
 
-        "equity_t": int(equity_t),
-        "equity_t_1": int(equity_t_1),
-        "long_equity": int(long_equity),
-        "short_equity": int(short_equity),
-        "equity_lag": int(equity_lag),
-        "delta_equity": int(delta_equity),
-        "delta_price_diff": int(delta_price_diff),
-        "delta_pos_diff": int(delta_pos_diff),
-        "delta_fx_diff": int(delta_fx_diff),
+        "EUR/USDT Rate T": eur_usd_t,
+        "Crypto wallets T": int(equity_t),
+        "Crypto wallets T-1": int(equity_t_1),
+        "Crypto long": int(long_equity),
+        "Crypto short": int(short_equity),
+        "Crypto wallets T-1 with Price T": int(equity_lag),
+        "Crypto delta": int(delta_equity),
+        "Crypto Delta Price Difference": int(delta_price_diff),
+        "Crypto Delta Position Difference": int(delta_pos_diff),
+        "Crypto Delta FX Difference": int(delta_fx_diff),
 
     }
 
     for key, value in delta_dict.items():
-        print(f"{key}: {value:,}")
+        print(f"{key}: {value}")
     return delta_dict
 
 
@@ -186,6 +187,7 @@ def delta_overview_stable(df_eur, df_usd, eur_usd_t, eur_usd_t_1):
 
     delta_dict = {
 
+        "EUR/USDT Rate T": eur_usd_t,
         "stable wallets T": int(equity_t_eur + equity_t_usd),
         "stable wallets T-1": int(equity_t_1_eur + equity_t_1_usd),
         "EUR Position": int(equity_t_eur),
@@ -193,14 +195,13 @@ def delta_overview_stable(df_eur, df_usd, eur_usd_t, eur_usd_t_1):
         "Delta Stables": int(equity_t_eur + equity_t_usd - (equity_t_1_eur + equity_t_1_usd)),
         "Delta EUR": int(equity_t_eur - equity_t_1_eur),
         "Delta USD": int(equity_t_usd - equity_t_1_usd),
-
         "USD - Delta FX Difference": int(delta_market_diff_usd),
         "USD - Delta Position Difference": int(delta_pos_diff_usd)
 
     }
 
     for key, value in delta_dict.items():
-        print(f"{key}: {value:,}")
+        print(f"{key}: {value}")
     return delta_dict
 
 def process_dataframe(df,df_correction):
@@ -229,21 +230,15 @@ def main():
 
     df_t_raw = pull_positions_raw(nday=1)
     df_t_1_raw = pull_positions_raw(nday=2)
-    epoch_t = df_t_raw['epoch'][0]
-    epoch_t_1 = df_t_1_raw['epoch'][0]
+
     df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
-    # print(df_correction[df_correction['epoch'].isin([epoch_t, epoch_t_1])][['asset', 'diff_native', 'epoch', 'comments']])
     df_t, fx_t, time_t = get_processed_df(df_t_raw, df_correction)
     df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw, df_correction)
-
 
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
-
-    print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
-
 
 ####################### DELTA OVERVIEW #############################################################################################
 
@@ -251,11 +246,9 @@ def main():
 
     datasets = [
         ("crypto", df_crypto_t, df_crypto_t_1),
-        ("stable", df_stable_t, df_stable_t_1),
         ("USD", df_stable_usd_t, df_stable_usd_t_1),
         ("EUR", df_stable_eur_t, df_stable_eur_t_1),
     ]
-
 
     merged_datasets = {}
 
