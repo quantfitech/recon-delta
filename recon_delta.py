@@ -34,8 +34,8 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 36723
-epoch_t_1 = 36579
+epoch_t = 39495
+epoch_t_1 =39345
 
 
 # threshold = 2000
@@ -54,7 +54,7 @@ def printdf(df: pd.DataFrame) -> None:
         print(df)
 
 
-def pull_positions_raw(epoch_nr):
+def pull_positions_raw1(epoch_nr):
     query_recon = text("""
                     select * from Reconciliations r
                     where epoch = :epoch_nr
@@ -65,6 +65,27 @@ def pull_positions_raw(epoch_nr):
         result = db.execute(query_recon, {"epoch_nr": epoch_nr})
         rows = result.fetchall()
         df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
+    return df
+
+def pull_positions_raw(nday):
+    # Target timestamp: previous day at 22:00:00
+    target_time = datetime.now().replace(hour=22, minute=0, second=0, microsecond=0) - timedelta(days=nday)
+
+    query = text("""
+        SELECT * FROM Reconciliations r
+        WHERE r.timestamp = (
+            SELECT MAX(timestamp)
+            FROM Reconciliations
+            WHERE timestamp <= :target_time
+        )
+        ORDER BY asset;
+    """)
+
+    with sql.connect() as db:
+        result = db.execute(query, {"target_time": target_time})
+        rows = result.fetchall()
+        df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
+
     return df
 
 def pull_yf_mutations_raw(time_t, time_t_1):
@@ -295,14 +316,16 @@ def main():
 
     df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
     print(df_correction[df_correction['epoch'].isin([epoch_t, epoch_t_1])][['asset', 'diff_native', 'epoch', 'comments']])
-    df_t_raw = pull_positions_raw(epoch_t)
+    df_t_raw = pull_positions_raw(nday=1)
+    printdf(df_t_raw.head())
+    sys.exit(1)
     df_t_1_raw = pull_positions_raw(epoch_t_1)
 
     df_t, fx_t, time_t = get_processed_df(df_t_raw, df_correction)
     df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw, df_correction)
 
 ####################### YIELD FARMING AND SIM PROFITS #################################################################
-
+    print('-------------------------------')
     df_orders= get_rfqs(time_t_1, time_t)
     total_volume = sim_volumne(df_orders)
     sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
@@ -319,14 +342,11 @@ def main():
 
     print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t} in USD is: {general_bank_t/fx_t}, {YF_t/fx_t}, {SI_t/fx_t} ')
     print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t_1} in USD is: {general_bank_t_1/fx_t_1}, {YF_t_1/fx_t_1}, {SI_t_1/fx_t_1}')
-    sys.exit(1)
+    print('-------------------------------')
 
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
-    printdf(df_stable_t)
-
-
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
     print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
