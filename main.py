@@ -33,11 +33,7 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 37591
-epoch_t_1 = 37446
-
 n_data= 20
-asset_to_check = []
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -50,42 +46,26 @@ def printdf(df: pd.DataFrame) -> None:
         # df = pd.DataFrame(df, columns=df.feature_names)
         print(df)
 
+def pull_positions_raw(nday):
+    # Target timestamp: previous day at 22:00:00
+    target_time = datetime.now().replace(hour=22, minute=0, second=0, microsecond=0) - timedelta(days=nday)
 
-def pull_positions_raw(epoch_nr):
-    query_recon = text("""
-                    select * from Reconciliations r
-                    where epoch = :epoch_nr
-                    order by asset;
-                         """)
+    query = text("""
+        SELECT * FROM Reconciliations r
+        WHERE r.timestamp = (
+            SELECT MAX(timestamp)
+            FROM Reconciliations
+            WHERE timestamp <= :target_time
+        )
+        ORDER BY asset;
+    """)
 
     with sql.connect() as db:
-        result = db.execute(query_recon, {"epoch_nr": epoch_nr})
+        result = db.execute(query, {"target_time": target_time})
         rows = result.fetchall()
         df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
+
     return df
-
-
-def plot(df, asset_name, n_data):
-    asset = df[df['asset'] == asset_name]
-
-    native_values = asset.drop(columns='asset').squeeze()
-
-    dates = [col.replace('diff_native_', '') for col in native_values.index]
-    dates = pd.to_datetime(dates, format='%Y%m%d')
-
-    plt.figure(figsize=(10, 5))
-    # sort by date
-    sorted_pairs = sorted(zip(dates, native_values.values))
-    sorted_pairs = sorted_pairs[-n_data:]
-    sorted_dates, sorted_values = zip(*sorted_pairs)
-    plt.plot(sorted_dates, sorted_values, marker='o')
-    plt.title(f'{asset_name} Native Difference Records')
-    plt.xlabel('Date')
-    plt.ylabel('Native Value')
-    plt.grid(True)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
 
 def data_process(df):
 
@@ -134,30 +114,6 @@ def compute_diff_native(df):
     keep_columns = [
         "asset", "price", "current_quantity",
         "current_nominal", "diff_native", "diff_nominal", "epoch", "timestamp"
-    ]
-
-    df = df_merged[keep_columns]
-    # df_merged['diff_native'] = df_merged['diff_native'].apply(lambda x: f"{x:,.0f}")
-    return df
-
-def compute_diff_native1(df):
-    df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
-
-    desired_quantity_sum = df_filtered.groupby(['asset','price',  'epoch'])['desired_quantity'].sum().reset_index()
-    desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
-
-    current_quantity_sum = df.groupby(['asset', 'price',  'epoch'])['current_quantity'].sum().reset_index()
-    current_quantity_sum.rename(columns={'current_quantity': 'current_quantity'}, inplace=True)
-
-    df_merged = current_quantity_sum.merge(desired_quantity_sum, on=['asset', 'price', 'epoch'], how='left')
-
-    df_merged['diff_native'] = df_merged['current_quantity'] - df_merged['desired_quantity'].fillna(0)
-    df_merged['diff_nominal'] = df_merged['diff_native'] * df_merged['price']
-    df_merged['current_nominal'] = df_merged['current_quantity'] * df_merged['price']
-
-    keep_columns = [
-        "asset", "price", "current_quantity",
-        "current_nominal", "diff_native", "diff_nominal", "epoch",
     ]
 
     df = df_merged[keep_columns]
@@ -229,41 +185,6 @@ def process_dataframe(df,df_correction):
     eur_usd = df.loc[df['asset'] == 'EUR', 'price'].values
     return df, eur_usd
 
-def recon_breaks(df, threshold):
-
-    df['break_native'] = df['diff_native_t'] - df['diff_native_t_1']
-    df['break_nominal'] = df['break_native'] * df['price_t']
-
-    df['breaks']  = abs(df['break_nominal']) > threshold
-
-    df_breaks = df[df['breaks']][['asset', 'diff_native_t', 'diff_native_t_1', 'breaks', 'break_native', 'break_nominal', 'timestamp_t']].copy()
-    df_breaks = df_breaks.reindex(df_breaks['break_nominal'].abs().sort_values(ascending=False).index)
-
-    return df_breaks
-
-def historical_diff(df, df_new):
-    new_col_df = extract_diff_native_column(df_new)
-    df = extract_diff_native_column(df)
-
-    if new_col_df.empty:
-        return df  # skip if nothing to merge
-
-    # Get the name of the new column (besides 'asset')
-    new_col_name = [col for col in new_col_df.columns if col != 'asset'][0]
-
-    if new_col_name in df.columns:
-        # Replace values in that column for matching assets
-        df = df.set_index('asset')
-        new_col_df = new_col_df.set_index('asset')
-
-        df.update(new_col_df)  # only updates the existing column
-        df = df.reset_index()
-    else:
-        # New date — merge as new column
-        df = df.merge(new_col_df, on='asset', how='outer')
-
-    return df
-
 def extract_diff_native_column(df):
     try:
         date_str = pd.to_datetime(df['timestamp'].iloc[0]).strftime('%Y%m%d')
@@ -280,11 +201,12 @@ def get_processed_df(df,df_correction):
 
 def main():
 
+    df_t_raw = pull_positions_raw(nday=1)
+    df_t_1_raw = pull_positions_raw(nday=2)
+    epoch_t = df_t_raw['epoch'][0]
+    epoch_t_1 = df_t_1_raw['epoch'][0]
     df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
-    print(df_correction[df_correction['epoch'].isin([epoch_t, epoch_t_1])][['asset', 'diff_native', 'epoch', 'comments']])
-    df_t_raw = pull_positions_raw(epoch_t)
-    df_t_1_raw = pull_positions_raw(epoch_t_1)
-
+    # print(df_correction[df_correction['epoch'].isin([epoch_t, epoch_t_1])][['asset', 'diff_native', 'epoch', 'comments']])
     df_t, fx_t, time_t = get_processed_df(df_t_raw, df_correction)
     df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw, df_correction)
 
@@ -316,14 +238,7 @@ def main():
 ####################### BREAKS CHECK #############################################################################################
 
     asset_to_check.extend(check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1)))
-    print(asset_to_check)
-    df = pd.read_csv('historical_diff.csv')
 
-    df = historical_diff(df, df_t)
-    df.to_csv('historical_diff.csv', index=False)
-    # df = pd.read_csv('historical_diff.csv')
-    for asset in asset_to_check:
-        plot(df, asset, n_data)
 
 if __name__ == "__main__":
     main()
