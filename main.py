@@ -179,6 +179,9 @@ def delta_overview_stable(df_eur, df_usd, eur_usd_t, eur_usd_t_1):
     equity_t_usd = (df_usd['diff_native_t'] * df_usd['price_t']).sum() / eur_usd_t
     df_usd["diff_nominal_t"] = df_usd['diff_native_t'] * df_usd['price_t']
     equity_t_1_usd = (df_usd['diff_native_t_1'] * df_usd['price_t_1']).sum() / eur_usd_t_1
+    equity_lag_eur = (df_eur['diff_native_t_1'] * df_eur['price_t']).sum() / eur_usd_t
+    equity_lag_usd = (df_usd['diff_native_t_1'] * df_usd['price_t']).sum() / eur_usd_t
+
     delta_price_diff_usd = ((df_usd['price_t'] - df_usd['price_t_1']) * df_usd['diff_native_t_1']).sum() / eur_usd_t
     delta_pos_diff_usd = ((df_usd['diff_native_t'] - df_usd['diff_native_t_1']) * df_usd['price_t']).sum() / eur_usd_t
     delta_fx_diff_usd = (df_usd['diff_native_t_1'] * df_usd['price_t_1']).sum() / eur_usd_t - (
@@ -189,7 +192,7 @@ def delta_overview_stable(df_eur, df_usd, eur_usd_t, eur_usd_t_1):
 
         "EUR/USDT Rate T": eur_usd_t,
         "stable wallets T": int(equity_t_eur + equity_t_usd),
-        "stable wallets T-1": int(equity_t_1_eur + equity_t_1_usd),
+        "stable wallets T-1 with Price T": int(equity_lag_eur + equity_lag_usd),
         "EUR Position": int(equity_t_eur),
         "USD Stable Position": int(equity_t_usd),
         "Delta Stables": int(equity_t_eur + equity_t_usd - (equity_t_1_eur + equity_t_1_usd)),
