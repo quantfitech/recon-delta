@@ -28,6 +28,15 @@ def YF_profit_cal (df):
     yf_profit = float(yf_profit)
     return yf_profit
 
+
+def yf_profit_cal_assets (df_t, df_t_1, epoch_t, epoch_t_1):
+
+    yf_balance_t = df_t.loc[(df_t['account'] == 'YIELD_FARM') & (df_t['epoch'] == epoch_t), 'nominal_difference'].sum()
+
+    yf_balance_t_1 = df_t_1.loc[(df_t_1['account'] == 'YIELD_FARM') & (df_t_1['epoch'] == epoch_t_1), 'nominal_difference'].sum()
+    yf_profit = (yf_balance_t - yf_balance_t_1)
+    return yf_profit
+
 def get_stable_pos_stable(df, stable):
 
     df_eur = df[df['asset'] == 'EUR']

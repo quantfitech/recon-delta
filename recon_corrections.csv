@@ -101,3 +101,10 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;MANA;;;;;20567;;;39345;;;epoch issues
 ;ONDO;;;;;11675;;;39345;;;epoch issues
 ;CRV;;;;;-2639;;;39345;;;epoch issues
+;SUPER;;;;;-797;;;39641;;;epoch issues - YF earn positions are not tracked
+;MLN;;;;;30;;;39641;;;epoch issues - YF earn positions are not tracked
+;HIVE;;;;;-16815;;;39641;;;epoch issues - YF earn positions are not tracked
+;ARK;;;;;108.7;;;39641;;;epoch issues - YF earn positions are not tracked
+;SHELL;;;;;-183;;;39641;;;epoch issues - YF earn positions are not tracked
+;STPT;;;;;0;;;39641;;;tokenswap
+;SOL;;;;;6943;;;39641;;;unstaked from Kiln
