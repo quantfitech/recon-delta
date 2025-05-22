@@ -29,8 +29,9 @@ def check_breaks_income(df, start_date, end_date):
     df_breaks['breaks_native'] = df_breaks['delta_native'] - df_breaks['in_out_flow']
     df_breaks['breaks_nominal'] = df_breaks['breaks_native'] * df_breaks['price_t']
     df_breaks['breaks']  = abs(df_breaks['breaks_nominal']) > threshold
-    keep_columns = [ "asset", "diff_native_t", "diff_native_t_1", "delta_native", "in_out_flow", "breaks_native" , "breaks_nominal", "timestamp_t"]
+    keep_columns = [ "asset", "diff_native_t", "diff_native_t_1", "delta_native", "delta_nominal","in_out_flow", "breaks_native" , "breaks_nominal", "timestamp_t"]
     df_breaks = df_breaks[keep_columns]
+    df_breaks = df_breaks.rename(columns={"diff_native_t": "position_t", "diff_native_t_1": "position_t-1", "timestamp_t": "date"})
 
     df_breaks = df_breaks.reindex(df_breaks['breaks_nominal'].abs().sort_values(ascending=False).index)
 
