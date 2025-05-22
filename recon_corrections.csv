@@ -108,3 +108,5 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;SHELL;;;;;-183;;;39641;;;epoch issues - YF earn positions are not tracked
 ;STPT;;;;;0;;;39641;;;tokenswap
 ;SOL;;;;;6943;;;39641;;;unstaked from Kiln
+;BTC;;;;;-1.771;;;39785;;;loan back from flow not logged
+;LINK;;;;;958.96;;;39785;;;loan logged but Kraken still need to take it

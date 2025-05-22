@@ -34,13 +34,13 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 39735
+epoch_t = 39785
 epoch_t_1 =39641
 
 
 # threshold = 2000
 n_data= 20
-asset_to_check = []
+asset_to_check = ['STPT', 'AWE']
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
