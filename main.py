@@ -234,7 +234,6 @@ def main():
     df_t_raw = pull_positions_raw(nday=1)
     df_t_1_raw = pull_positions_raw(nday=2)
 
-    # df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
     df_t, fx_t, time_t = get_processed_df(df_t_raw)
     df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw)
 
