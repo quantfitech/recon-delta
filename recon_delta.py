@@ -34,8 +34,8 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 39785
-epoch_t_1 =39641
+epoch_t = 39929
+epoch_t_1 =39785
 
 
 # threshold = 2000

@@ -110,3 +110,7 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;SOL;;;;;6943;;;39641;;;unstaked from Kiln
 ;BTC;;;;;-1.771;;;39785;;;loan back from flow not logged
 ;LINK;;;;;958.96;;;39785;;;loan logged but Kraken still need to take it
+;BTC;;;;;-1.771;;;39929;;;loan not logged 
+;SUI;;;;;414;;;39929;;;epoch issues
+;MOODENG;;;;;-7148;;;39929;;;epoch issues
+;LINK;;;;;960.874;;;39929;;;loan logged but Kraken still need to take it
