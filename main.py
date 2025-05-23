@@ -86,15 +86,15 @@ def data_process(df):
     # df[float_columns] = df[float_columns].applymap(lambda x: f"{x:,.0f}" if pd.notna(x) else "0")
     return df
 
-def overwrite_values(df, df_correction):
-
-    # Iterate through df2 and update df1 where asset and epoch match
-    for _, row in df_correction.iterrows():
-        mask = (df['epoch'] == row['epoch']) & (df['asset'] == row['asset'])
-        for col in df_correction.columns:
-            if col not in ['epoch', 'asset'] and pd.notna(row[col]):
-                df.loc[mask, col] = row[col]
-    return df
+# def overwrite_values(df, df_correction):
+#
+#     # Iterate through df2 and update df1 where asset and epoch match
+#     for _, row in df_correction.iterrows():
+#         mask = (df['epoch'] == row['epoch']) & (df['asset'] == row['asset'])
+#         for col in df_correction.columns:
+#             if col not in ['epoch', 'asset'] and pd.notna(row[col]):
+#                 df.loc[mask, col] = row[col]
+#     return df
 
 def compute_diff_native(df):
     df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
@@ -207,11 +207,11 @@ def delta_overview_stable(df_eur, df_usd, eur_usd_t, eur_usd_t_1):
         print(f"{key}: {value}")
     return delta_dict
 
-def process_dataframe(df,df_correction):
+def process_dataframe(df):
     df = data_process(df)
     df = compute_diff_native(df)
 
-    df = overwrite_values(df, df_correction)
+    # df = overwrite_values(df)
     eur_usd = df.loc[df['asset'] == 'EUR', 'price'].values
     return df, eur_usd
 
@@ -223,9 +223,9 @@ def extract_diff_native_column(df):
     except Exception:
         return df
 
-def get_processed_df(df,df_correction):
+def get_processed_df(df):
     timestamp = df['timestamp'].iloc[0]
-    df, fx = process_dataframe(df, df_correction)
+    df, fx = process_dataframe(df)
     return df, fx, timestamp
 
 
@@ -234,9 +234,9 @@ def main():
     df_t_raw = pull_positions_raw(nday=1)
     df_t_1_raw = pull_positions_raw(nday=2)
 
-    df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
-    df_t, fx_t, time_t = get_processed_df(df_t_raw, df_correction)
-    df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw, df_correction)
+    # df_correction = pd.read_csv('recon_corrections.csv', delimiter=';')
+    df_t, fx_t, time_t = get_processed_df(df_t_raw)
+    df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw)
 
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
