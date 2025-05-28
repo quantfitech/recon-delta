@@ -74,5 +74,5 @@ def expected_flow(start_date, end_date):
 
     df_flow = df_flow[keep_columns]
     df_total = df_flow.groupby(['asset'], as_index=False)[['flow_native','flow_fiat']].sum()
-    print(f'\nThe total net income between {start_date} and { end_date} is : {df_total['flow_fiat'].sum()} USD')
+    print(f'\nThe total net income between {start_date} and { end_date} is : {df_total['flow_fiat'].sum()} USD\n')
     return df_total

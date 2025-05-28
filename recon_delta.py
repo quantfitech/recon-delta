@@ -34,13 +34,13 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 40509
-epoch_t_1 =40362
+epoch_t = 40654
+epoch_t_1 =40509
 
 
 # threshold = 2000
 n_data= 20
-asset_to_check = ['STPT', 'AWE']
+asset_to_check = ['EOS']
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -324,34 +324,34 @@ def main():
     df_t_1, fx_t_1, time_t_1 = get_processed_df(df_t_1_raw, df_correction)
 
 ####################### YIELD FARMING AND SIM PROFITS #################################################################
-    print('-------------------------------')
+    print(f'\n------------  SIM and YF profits information between {time_t_1} and {time_t} in USD -------------------')
     df_orders= get_rfqs(time_t_1, time_t)
     total_volume = sim_volumne(df_orders)
     sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
     sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
 
-    print(f'the SIM profit between {time_t_1} and {time_t} in USD is: {sim_profit} (ref: {sim_profit_usdt})')
+    print(f'the SIM profit in USD is: {sim_profit} (the SIM USDT balance move is: {sim_profit_usdt})')
     print(f'the estimate for SIM profit based on trades volume [{total_volume}] in USD is between {total_volume *0.8*0.01} and {total_volume *1.0*0.01})')
     df_yf = pull_yf_mutations_raw(time_t, time_t_1)
     yf_profit = YF_profit_cal(df_yf)
     yf_assets_delta = yf_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
 
-    print(f'the YIELD FARMING profit between {time_t_1} and {time_t} in USD is: {yf_profit}')
-    print(f'the YIELD FARMING assets value movement between {time_t_1} and {time_t} in USD is: {yf_assets_delta}')
+    print(f'the YIELD FARMING profit in USD is: {yf_profit}')
+    print(f'the YIELD FARMING crypto values movement in USD is: {yf_assets_delta}')
 
     YF_t, SI_t, general_bank_t = get_stable_pos_stable(df_t_raw, stable)
     YF_t_1, SI_t_1, general_bank_t_1 = get_stable_pos_stable(df_t_1_raw, stable)
 
     print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t} in USD is: {general_bank_t/fx_t}, {YF_t/fx_t}, {SI_t/fx_t} ')
-    print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t_1} in USD is: {general_bank_t_1/fx_t_1}, {YF_t_1/fx_t_1}, {SI_t_1/fx_t_1}')
-    print('-------------------------------')
+    # print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t_1} in USD is: {general_bank_t_1/fx_t_1}, {YF_t_1/fx_t_1}, {SI_t_1/fx_t_1}')
+    print('\n-------------------------------')
 
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
     df_crypto_t_1, df_stable_t_1, df_stable_usd_t_1, df_stable_eur_t_1 = df_split(df_t_1, stable)
 
-    print(f'EUR/USD_T: {fx_t},\nEUR/USD_T-1: {fx_t_1}')
+    print(f'EUR/USD_RATE T: {fx_t},\nEUR/USD RATE T-1: {fx_t_1}')
 
 
 ####################### DELTA OVERVIEW #############################################################################################

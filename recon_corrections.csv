@@ -114,3 +114,4 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;SUI;;;;;414;;;39929;;;epoch issues
 ;MOODENG;;;;;-7148;;;39929;;;epoch issues
 ;LINK;;;;;960.874;;;39929;;;loan logged but Kraken still need to take it
+;EOS;;;;;-776;;;40654;;;tokenswap
