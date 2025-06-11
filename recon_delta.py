@@ -34,9 +34,8 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 40654
-epoch_t_1 =40509
-
+epoch_t = 42688
+epoch_t_1 = 42542
 
 # threshold = 2000
 n_data= 20
@@ -326,7 +325,7 @@ def main():
 ####################### YIELD FARMING AND SIM PROFITS #################################################################
     print(f'\n------------  SIM and YF profits information between {time_t_1} and {time_t} in USD -------------------')
     df_orders= get_rfqs(time_t_1, time_t)
-    total_volume = sim_volumne(df_orders)
+    total_volume = float(sim_volumne(df_orders))
     sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
     sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
 
