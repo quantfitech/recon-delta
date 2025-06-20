@@ -72,14 +72,14 @@ def data_process(df):
     df = df.reset_index(drop=True)
 
     keep_columns = [
-               "account", "asset", "price", "current_quantity", "desired_quantity",
+               "account", "asset", "price", "current_quantity", "desired_quantity", "global_desired_quantity",
                "expected_quantity","native_difference","nominal_difference","nominal_quantity","epoch","timestamp"
     ]
 
     df = df[keep_columns]
 
     float_columns = [
-        "price", "current_quantity", "desired_quantity", "expected_quantity","native_difference","nominal_difference","nominal_quantity"
+        "price", "current_quantity", "desired_quantity", "global_desired_quantity","expected_quantity","native_difference","nominal_difference","nominal_quantity"
     ]
 
     df[float_columns] = df[float_columns].apply(pd.to_numeric, errors='coerce')
@@ -97,10 +97,9 @@ def data_process(df):
 #     return df
 
 def compute_diff_native(df):
-    df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
 
-    desired_quantity_sum = df_filtered.groupby(['asset','price', 'timestamp', 'epoch'])['desired_quantity'].sum().reset_index()
-    desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
+    desired_quantity_sum = df.groupby(['asset','price', 'timestamp', 'epoch'])['global_desired_quantity'].sum().reset_index()
+    desired_quantity_sum.rename(columns={'global_desired_quantity': 'desired_quantity'}, inplace=True)
 
     current_quantity_sum = df.groupby(['asset', 'price', 'timestamp', 'epoch'])['current_quantity'].sum().reset_index()
     current_quantity_sum.rename(columns={'current_quantity': 'current_quantity'}, inplace=True)
