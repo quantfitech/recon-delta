@@ -34,13 +34,12 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 40654
-epoch_t_1 =40509
-
+epoch_t = 43979
+epoch_t_1 =43835
 
 # threshold = 2000
 n_data= 20
-asset_to_check = ['EOS']
+asset_to_check = []
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -148,14 +147,14 @@ def data_process(df):
     df = df.reset_index(drop=True)
 
     keep_columns = [
-               "account", "asset", "price", "current_quantity", "desired_quantity",
+               "account", "asset", "price", "current_quantity", "desired_quantity", "global_desired_quantity",
                "expected_quantity","native_difference","nominal_difference","nominal_quantity","epoch","timestamp"
     ]
 
     df = df[keep_columns]
 
     float_columns = [
-        "price", "current_quantity", "desired_quantity", "expected_quantity","native_difference","nominal_difference","nominal_quantity"
+        "price", "current_quantity", "desired_quantity", "global_desired_quantity", "expected_quantity","native_difference","nominal_difference","nominal_quantity"
     ]
 
     df[float_columns] = df[float_columns].apply(pd.to_numeric, errors='coerce')
@@ -173,10 +172,15 @@ def overwrite_values(df, df_correction):
     return df
 
 def compute_diff_native(df):
-    df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
-
-    desired_quantity_sum = df_filtered.groupby(['asset','price', 'timestamp', 'epoch'])['desired_quantity'].sum().reset_index()
-    desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
+    # df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
+    # if df['epoch'][0]<epoch_new_db:
+    #     desired_quantity_sum = df_filtered.groupby(['asset', 'price', 'timestamp', 'epoch'])[
+    #         'desired_quantity'].sum().reset_index()
+    #     desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
+    # else:
+    desired_quantity_sum = df.groupby(['asset', 'price', 'timestamp', 'epoch'])[
+        'global_desired_quantity'].sum().reset_index()
+    desired_quantity_sum.rename(columns={'global_desired_quantity': 'desired_quantity'}, inplace=True)
 
     current_quantity_sum = df.groupby(['asset', 'price', 'timestamp', 'epoch'])['current_quantity'].sum().reset_index()
     current_quantity_sum.rename(columns={'current_quantity': 'current_quantity'}, inplace=True)
@@ -257,6 +261,7 @@ def delta_overview(df, eur_usd_t,eur_usd_t_1):
 
 def process_dataframe(df,df_correction):
     df = data_process(df)
+
     df = compute_diff_native(df)
 
     df = overwrite_values(df, df_correction)
@@ -307,6 +312,7 @@ def extract_diff_native_column(df):
         return df
 
 def get_processed_df(df,df_correction):
+
     timestamp = df['timestamp'].iloc[0]
     df, fx = process_dataframe(df, df_correction)
     return df, fx, timestamp
@@ -331,7 +337,7 @@ def main():
     sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
 
     print(f'the SIM profit in USD is: {sim_profit} (the SIM USDT balance move is: {sim_profit_usdt})')
-    print(f'the estimate for SIM profit based on trades volume [{total_volume}] in USD is between {total_volume *0.8*0.01} and {total_volume *1.0*0.01})')
+    # print(f'the estimate for SIM profit based on trades volume [{total_volume}] in USD is between {total_volume *0.8*0.01} and {total_volume *1.0*0.01})')
     df_yf = pull_yf_mutations_raw(time_t, time_t_1)
     yf_profit = YF_profit_cal(df_yf)
     yf_assets_delta = yf_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
@@ -343,9 +349,9 @@ def main():
     YF_t_1, SI_t_1, general_bank_t_1 = get_stable_pos_stable(df_t_1_raw, stable)
 
     print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t} in USD is: {general_bank_t/fx_t}, {YF_t/fx_t}, {SI_t/fx_t} ')
-    # print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t_1} in USD is: {general_bank_t_1/fx_t_1}, {YF_t_1/fx_t_1}, {SI_t_1/fx_t_1}')
+    print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t_1} in USD is: {general_bank_t_1/fx_t_1}, {YF_t_1/fx_t_1}, {SI_t_1/fx_t_1}')
     print('\n-------------------------------')
-
+    sys.exit(1)
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)

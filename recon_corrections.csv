@@ -115,3 +115,50 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;MOODENG;;;;;-7148;;;39929;;;epoch issues
 ;LINK;;;;;960.874;;;39929;;;loan logged but Kraken still need to take it
 ;EOS;;;;;-776;;;40654;;;tokenswap
+;BTC;;;;;1;;;42686;;;epoch issues
+;HBAR;;;;;-3875;;;42686;;;epoch issues
+;ETH;;;;;628;;;42686;;;epoch issues
+;POL;;;;;378311;;;42971;;;unstaked from Kiln, but not shown in the positions yet
+;INJ;;;;;26003;;;42971;;;unstaked from Kiln, but not shown in the positions yet
+;FITFI;;;;;-40672;;;42971;;;epoch issues
+;HBAR;;;;;-2693;;;42971;;;epoch issues
+;VET;;;;;-324232;;;42830;;;epoch issues
+;AI16Z;;;;;-773;;;42830;;;epoch issues
+;KAIA;;;;;74;;;42830;;;epoch issues
+;FITFI;;;;;-40672;;;42830;;;epoch issues
+;BTC;;;;;1;;;43115;;;epoch issues
+;DUSK;;;;;-15792;;;42971;;;fixed on SIM
+;PEAQ;;;;;46845;;;43115;;;epoch issues
+;VET;;;;;-317025;;;43115;;;epoch issues
+;INJ;;;;;26003;;;43115;;;
+;POL;;;;;378310;;;43115;;;
+;DOGE;;;;;971825;;;43259;;;epoch issues
+;INJ;;;;;26003;;;43259;;;
+;POL;;;;;378310;;;43259;;;
+;XRP;;;;;-12843;;;43403;;;epoch issues
+;INJ;;;;;26003;;;43403;;;
+;POL;;;;;378310;;;43403;;;
+;TOMI;;;;;-4228690;;;43403;;;epoch issues
+;INJ;;;;;26003;;;43547;;;unstaking
+;SYRUP;;;;;-3;;;43547;;;epoch issues
+;VET;;;;;-323931;;;43547;;;epoch issues
+;BTC;;;;;1.34;;;43547;;;epoch issues
+;INJ;;;;;26003;;;43691;;;unstaking
+;ATOM;;;;;51565;;;43691;;;unstaking
+;DOT;;;;;73977;;;43691;;;unstaking
+;TIA;;;;;18529;;;43691;;;unstaking
+;XRP;;;;;-13223;;;43691;;;epoch issues
+;AMP;;;;;46461;;;43691;;;epoch issues
+;INJ;;;;;26003;;;43835;;;unstaking
+;ATOM;;;;;51565;;;43835;;;unstaking
+;DOT;;;;;73977;;;43835;;;unstaking
+;TIA;;;;;18529;;;43835;;;unstaking
+;INJ;;;;;26003;;;43979;;;unstaking
+;ATOM;;;;;51565;;;43979;;;unstaking
+;DOT;;;;;73977;;;43979;;;unstaking
+;TIA;;;;;18529;;;43979;;;unstaking
+;BIFI;;;;;0;;;43979;;;epoch issues
+;FUN;;;;;294235;;;43979;;;epoch issues
+;PEAQ;;;;;46844;;;43979;;;epoch issues
+;ETH;;;;;621;;;43979;;;epoch issues
+;XRP;;;;;-4572;;;43979;;;epoch issues

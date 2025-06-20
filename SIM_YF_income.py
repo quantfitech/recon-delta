@@ -40,9 +40,10 @@ def yf_profit_cal_assets (df_t, df_t_1, epoch_t, epoch_t_1):
 def get_stable_pos_stable(df, stable):
 
     df_eur = df[df['asset'] == 'EUR']
+    coinmerce_account = "COINMERCE" if "COINMERCE" in df_eur['account'].values else "COINMERCE_CUSTODY"
     eur_bank = (
             df_eur.loc[df_eur['account'] == 'BANK', 'current_quantity'].iloc[0] -
-            df_eur.loc[df_eur['account'] == 'COINMERCE', 'desired_quantity'].iloc[0]
+            df_eur.loc[df_eur['account'] == coinmerce_account, 'desired_quantity'].iloc[0]
     )
 
     df_stable = df[df['asset'].isin(stable)]
