@@ -36,9 +36,10 @@ def check_breaks_income(df, start_date, end_date):
     df_breaks = df_breaks.reindex(df_breaks['breaks_nominal'].abs().sort_values(ascending=False).index)
 
     printdf(df_breaks)
-    filtered = df_breaks[df_breaks['breaks_nominal'].abs() > threshold]
+    # filtered = df_breaks[df_breaks['breaks_nominal'].abs() > threshold]
+    df_breaks.to_csv('asset position movement.csv', index=False)
 
-    return filtered['asset']
+    return df_breaks['asset']
 
 def expected_flow(start_date, end_date):
 

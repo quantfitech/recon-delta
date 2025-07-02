@@ -34,12 +34,12 @@ DATABASE = os.getenv('MYSQL_DATABASE')
 sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
 
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
-epoch_t = 43979
-epoch_t_1 =43835
+epoch_t = 45707
+epoch_t_1 = 45563
 
 # threshold = 2000
 n_data= 20
-asset_to_check = []
+asset_to_check = ['DOT','GLMR','KLAY','KAIA','BOME']
 
 def printdf(df: pd.DataFrame) -> None:
     # Get terminal width dynamically
@@ -351,7 +351,7 @@ def main():
     print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t} in USD is: {general_bank_t/fx_t}, {YF_t/fx_t}, {SI_t/fx_t} ')
     print(f'the GENERAL_BANK, YIELD FARMING and SIM balance at {time_t_1} in USD is: {general_bank_t_1/fx_t_1}, {YF_t_1/fx_t_1}, {SI_t_1/fx_t_1}')
     print('\n-------------------------------')
-    sys.exit(1)
+
 ####################### SPLIT THE DATA TO CRYPTO AND STABLES #################################################################
 
     df_crypto_t, df_stable_t, df_stable_usd_t, df_stable_eur_t = df_split(df_t, stable)
@@ -381,7 +381,6 @@ def main():
     asset_to_check.extend(check_breaks_income(df_crypto_2t, time_t_1, time_t+timedelta(days=1)))
     print(asset_to_check)
     df = pd.read_csv('historical_diff.csv')
-
     df = historical_diff(df, df_t)
     df.to_csv('historical_diff.csv', index=False)
     # df = pd.read_csv('historical_diff.csv')

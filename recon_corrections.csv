@@ -162,3 +162,41 @@ account;asset;price;current_quantity;desired_quantity;expected_quantity;diff_nat
 ;PEAQ;;;;;46844;;;43979;;;epoch issues
 ;ETH;;;;;621;;;43979;;;epoch issues
 ;XRP;;;;;-4572;;;43979;;;epoch issues
+;DOT;;;;;74439;;;44555;;;unstaking kiln
+;DOT;;;;;74439;;;44699;;;unstaking kiln
+;FORM;;;;;-83;;;44555;;;FB issues
+;BANANA;;;;;0;;;44843;;;FB Symbleoverrides
+;ETHFI;;;;;-32;;;44843;;;FB Symbleoverrides
+;SYRUP;;;;;-6;;;44843;;;FB Symbleoverrides
+;ZRO;;;;;-1679;;;44843;;;FB Symbleoverrides
+;PARTI;;;;;53;;;44843;;;FB Symbleoverrides
+;EPIC;;;;;-3165;;;44843;;;FB Symbleoverrides
+;USUAL;;;;;-2589;;;44843;;;FB Symbleoverrides
+;SPX;;;;;6067;;;44987;;;FB Symbleoverrides
+;TOKEN;;;;;1872463;;;44987;;;FB Symbleoverrides
+;WLD;;;;;146;;;44987;;;FB Symbleoverrides
+;MOVE;;;;;63;;;44987;;;FB Symbleoverrides
+;BTC;;;;;1;;;45131;;;epoch issues
+;KAS;;;;;58953;;;45131;;;epoch issues
+;ICX;;;;;1720;;;45131;;;epoch issues
+;KAITO;;;;;-235;;;45131;;;epoch issues
+;FIL;;;;;741;;;45131;;;FB Symbleoverrides
+;GUN;;;;;-1300;;;45131;;;epoch issues
+;BERA;;;;;0;;;45131;;;FB Symbleoverrides
+;XRP;;;;;-945;;;45275;;;Loan back
+;FIL;;;;;741;;;45275;;;FB Symbleoverrides
+;BERA;;;;;0;;;45275;;;FB Symbleoverrides
+;DUSK;;;;;-15813;;;45275;;;epoch issues
+;SOL;;;;;6864;;;45419;;;epoch issues
+;ADA;;;;;138151;;;45419;;;epoch issues
+;AERO;;;;;832;;;45419;;;FB Symbleoverrides
+;AI16Z;;;;;-847;;;45419;;;FB Symbleoverrides
+;PLUME;;;;;15821;;;45419;;;FB Symbleoverrides
+;BERA;;;;;0;;;45419;;;FB Symbleoverrides
+;SAFE;;;;;-473;;;45419;;;FB Symbleoverrides
+;BTC;;;;;1.26;;;45563;;;
+;WIF;;;;;12100;;;45707;;;Kraken loan roll
+;BONK;;;;;291703180;;;45707;;;Kraken loan roll
+;MORPHO;;;;;1722;;;45707;;;Kraken loan roll
+;FLOKI;;;;;16698648;;;45707;;;Kraken loan roll
+;DENT;;;;;1968487;;;45707;;;Kraken loan roll
