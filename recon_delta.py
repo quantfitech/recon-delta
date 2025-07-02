@@ -1,38 +1,9 @@
-import sys
-
-import numpy as np
-import pandas as pd
-import os
-import warnings
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sqlalchemy import create_engine, text
-from dotenv import load_dotenv
-import shutil
-from check_breaks import *
-from SIM_YF_income import *
-from sklearn.datasets import load_iris
-
-from datetime import datetime, timezone, timedelta
-
+from database_conn import *
 # Ignore warnings
 warnings.filterwarnings("ignore")
 load_dotenv('.env')
 
-#GLOBALS
-REDIS_HOST = os.getenv('REDIS_HOST')
-REDIS_PORT = os.getenv('REDIS_PORT')
-
-ALERT_TOKEN = os.getenv('ALERT_TOKEN')
-ALERT_USER = os.getenv('ALERT_USER')
-
-USERNAME = os.getenv('MYSQL_USER')
-PASSWORD = os.getenv('MYSQL_PASSWORD')
-HOST = os.getenv('MYSQL_HOST')
-DATABASE = os.getenv('MYSQL_DATABASE')
-
-sql = create_engine(f'mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}/{DATABASE}')
-
+#GLOBAL VARIABLES
 stable = ['EUR', 'FDUSD', 'USD', 'USDC', 'USDT']
 epoch_t = 45707
 epoch_t_1 =45563
@@ -51,85 +22,6 @@ def printdf(df: pd.DataFrame) -> None:
                            'display.expand_frame_repr', True):  # Avoid splitting columns
         # df = pd.DataFrame(df, columns=df.feature_names)
         print(df)
-
-def get_corrections():
-    query_recon = text("""
-        SELECT * FROM ReconciliationCorrections;
-    """)
-
-
-    with sql.connect() as db:
-        result = db.execute(query_recon)
-        rows = result.fetchall()
-        df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
-
-    return df
-
-def pull_positions_raw1(epoch_nr):
-    query_recon = text("""
-                    select * from Reconciliations r
-                    where epoch = :epoch_nr
-                    order by asset;
-                         """)
-
-    with sql.connect() as db:
-        result = db.execute(query_recon, {"epoch_nr": epoch_nr})
-        rows = result.fetchall()
-        df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
-    return df
-
-def pull_positions_raw(nday):
-    # Target timestamp: previous day at 22:00:00
-    target_time = datetime.now().replace(hour=22, minute=0, second=0, microsecond=0) - timedelta(days=nday)
-
-    query = text("""
-        SELECT * FROM Reconciliations r
-        WHERE r.timestamp = (
-            SELECT MAX(timestamp)
-            FROM Reconciliations
-            WHERE timestamp <= :target_time
-        )
-        ORDER BY asset;
-    """)
-
-    with sql.connect() as db:
-        result = db.execute(query, {"target_time": target_time})
-        rows = result.fetchall()
-        df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
-
-    return df
-
-def pull_yf_mutations_raw(time_t, time_t_1):
-    query_recon = text("""
-        SELECT * FROM LedgerMutations l
-        WHERE timestamp < :time_t 
-          AND timestamp > :time_t_1
-          AND asset = 'USDT' 
-          AND subType = 'FUNDING_FEE';
-    """)
-
-    with sql.connect() as db:
-        result = db.execute(query_recon, {"time_t": time_t, "time_t_1": time_t_1})
-        rows = result.fetchall()
-        df = pd.DataFrame(rows, columns=result.keys()) if rows else pd.DataFrame()
-    return df
-
-def get_rfqs(start_time, end_time):
-
-    query_volumes = text("""
-        SELECT * FROM RequestForQuotes
-        WHERE acceptedAt IS NOT NULL
-        AND executedAt IS NOT NULL
-        AND executedAt BETWEEN :start_time AND :end_time;
-    """)
-
-    with sql.connect() as db:
-        result = db.execute(query_volumes, {
-            "start_time": start_time,
-            "end_time": end_time
-        })
-        df = pd.DataFrame(result.fetchall(), columns=result.keys())
-    return df
 
 
 def plot(df, asset_name, n_data):
@@ -184,12 +76,7 @@ def overwrite_values(df, df_correction):
     return df
 
 def compute_diff_native(df):
-    # df_filtered = df[~df['account'].isin(['SI', 'YIELD_FARM'])]
-    # if df['epoch'][0]<epoch_new_db:
-    #     desired_quantity_sum = df_filtered.groupby(['asset', 'price', 'timestamp', 'epoch'])[
-    #         'desired_quantity'].sum().reset_index()
-    #     desired_quantity_sum.rename(columns={'desired_quantity': 'desired_quantity'}, inplace=True)
-    # else:
+
     desired_quantity_sum = df.groupby(['asset', 'price', 'timestamp', 'epoch'])[
         'global_desired_quantity'].sum().reset_index()
     desired_quantity_sum.rename(columns={'global_desired_quantity': 'desired_quantity'}, inplace=True)
@@ -333,9 +220,10 @@ def get_processed_df(df,df_correction):
 def main():
 
     df_correction = get_corrections()
-    df_correction = df_correction.rename(columns={"differenceNative": "diff_native"})
 
+    df_correction = df_correction.rename(columns={"differenceNative": "diff_native"})
     print(df_correction[df_correction['epoch'].isin([epoch_t, epoch_t_1])][['asset', 'diff_native', 'epoch', 'comments']])
+
     df_t_raw = pull_positions_raw1(epoch_t)
 
     df_t_1_raw = pull_positions_raw1(epoch_t_1)
@@ -345,7 +233,9 @@ def main():
 
 ####################### YIELD FARMING AND SIM PROFITS #################################################################
     print(f'\n------------  SIM and YF profits information between {time_t_1} and {time_t} in USD -------------------')
+
     df_orders= get_rfqs(time_t_1, time_t)
+
     total_volume = sim_volumne(df_orders)
     sim_profit = sim_profit_cal_assets(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
     sim_profit_usdt = sim_profit_cal_usdt(df_t_raw, df_t_1_raw, epoch_t, epoch_t_1)
